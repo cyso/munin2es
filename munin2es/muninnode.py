@@ -17,6 +17,7 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import json
 import socket
 
 class MuninNodeClient(object):
@@ -105,3 +106,35 @@ class MuninNodeClient(object):
 		""" Fetch the version of Munin Node. """
 		self.connection.sendall("version\n")
 		return self._readline()
+
+class MuninMessage(object):
+	""" Format Munin Node output into (JSON) messages. """
+
+	def __init__(self, config={}, values={}):
+		""" Initialize a new MuninMessage for the given configuration and values. """
+		self.config = config
+		self.values = values
+
+	def format(self, as_string=True, individual=True):
+		"""
+		Format the given configuration and values into JSON strings.
+		If as_string is True: output will be a JSON string of a list of messages.
+		If individual is also True: output will be a list of JSON strings, each a single message.
+		If neither are True: output will be a list of Python objects.
+		"""
+		messages = []
+		for key, value in self.values.iteritems():
+			message = {
+				"graph": self.config["graph"],
+				"config": self.config["specific"][key],
+				"key": key,
+				"value": value
+			}
+			if as_string and individual:
+				messages.append(json.dumps(message))
+		if as_string and individual:
+			return messages
+		elif as_string:
+			return json.dumps(messages)
+		else:
+			return messages
