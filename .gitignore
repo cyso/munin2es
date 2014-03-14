@@ -1,0 +1,20 @@
+## Compiled Python files
+*.pyc
+
+## Working directories
+/dist
+
+## Config files
+/*.config
+
+## Ant generated files
+/doc/*.1
+/*.tar.bz2
+
+## Debian build files
+/debian/control
+/debian/imagecat.*
+/debian/files
+/debian/tmp
+/debian/*.log
+/debian/*.README.*
