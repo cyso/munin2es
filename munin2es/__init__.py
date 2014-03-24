@@ -21,37 +21,33 @@ NAME = "munin2es"
 VERSION = "0.1"
 BUILD = "AAAAA"
 
-import logging, logging.handlers, os, pwd, grp, sys, inspect, tempfile
+THREADS = None
+INTERVAL = None
 
-def getLogger(name, level=logging.INFO, handlers=[]):
-	logger = logging.getLogger(name)
+import logging, logging.handlers, os
+from chaos.threads import Threads
+from chaos.scheduler import Scheduler
+from chaos.logging import get_logger
 
-	if len(handlers) != 0:
-		logger.setLevel(level)
+def initialize():
+	global THREADS, INTERVAL
 
-	if "console" in handlers:
-		strm = logging.StreamHandler()
-		fmt = logging.Formatter('%(message)s')
-		strm.setLevel(level)
-		strm.setFormatter(fmt)
-		logger.addHandler(strm)
+	get_logger(__name__).info("Initializing...")
 
-	if "file" in handlers:
-		conf = handlers['file']
-		fl = logging.handlers.WatchedFileHandler(conf['logfile'])
-		fl.setLevel(level)
+	if THREADS is None:
+		THREADS = Threads()
 
-		fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-		fl.setFormatter(fmt)
-		logger.addHandler(fl)
+	testThread = Scheduler(2, hello, "testThread", True, text="Hello")
 
-	if "syslog" in handlers:
-		sysl = logging.handlers.SysLogHandler(address='/dev/log', facility=logging.handlers.SysLogHandler.LOG_SYSLOG)
-		sysl.setLevel(level)
+	THREADS.registerThread("test", testThread)
 
-		formatter = logging.Formatter('%(name)s[' + str(os.getpid()) + '] %(levelname)-8s: %(message)s')
-		sysl.setFormatter(formatter)
-		logger.addHandler(sysl)
+	THREADS.startAll()
 
-	return logger
+def signal_handler(signum=None, frame=None):
+	global THREADS
+	if type(signum) != type(None):
+		get_logger(__name__).info("Caught signal {0}".format(signum))
+		THREADS.stopAll(exit=True)
 
+def hello(text):
+	get_logger(__name__).info(text)
