@@ -23,11 +23,12 @@ import socket
 class MuninNodeClient(object):
 	""" Connects to Munin Node, and provides easy access to its data. """
 
-	def __init__(self, host, port=4949):
+	def __init__(self, hostname, port=4949, address=None):
 		""" Connect to the given host and port. """
-		self.connection = socket.create_connection((host, port))
+		self.connection = socket.create_connection((hostname if not address else address, port))
 		self.file = self.connection.makefile()
 		self.hello = self._readline()
+		self.hostname = hostname
 
 	def _readline(self):
 		return self.file.readline().strip()
