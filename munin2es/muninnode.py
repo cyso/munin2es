@@ -104,7 +104,7 @@ class MuninNodeClient(object):
 		messages = []
 
 		for module in modules:
-			message = MuninMessage(config=self.config(module, mangle=True), values=self.fetch(module))
+			message = MuninMessage(hostname=self.hostname, config=self.config(module, mangle=True), values=self.fetch(module))
 			if preformat:
 				message = message.format(**kwargs)
 			messages.extend(message)
@@ -124,8 +124,9 @@ class MuninNodeClient(object):
 class MuninMessage(object):
 	""" Format Munin Node output into (JSON) messages. """
 
-	def __init__(self, config={}, values={}):
+	def __init__(self, hostname, config={}, values={}, timestamp=True):
 		""" Initialize a new MuninMessage for the given configuration and values. """
+		self.hostname = hostname
 		self.config = config
 		self.values = values
 
@@ -141,6 +142,7 @@ class MuninMessage(object):
 			message = {
 				"graph": self.config["graph"],
 				"config": self.config["specific"][key],
+				"hostname": self.hostname,
 				"key": key,
 				"value": value
 			}
