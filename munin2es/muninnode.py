@@ -97,6 +97,19 @@ class MuninNodeClient(object):
 				output["specific"][key] = value
 		return output
 
+	def get_all_messages(self, preformat=True, **kwargs):
+		""" Retrieve all module values as MuninMessage. If preformat is True, kwargs is passed to MuninMessage.format()"""
+		modules = self.list()
+		messages = []
+
+		for module in modules:
+			message = MuninMessage(config=self.config(module, mangle=True), values=self.fetch(module))
+			if preformat:
+				message = message.format(**kwargs)
+			messages.extend(message)
+
+		return messages
+
 	def nodes(self):
 		""" List the nodes Munin Node can access. """
 		self.connection.sendall("nodes\n")
