@@ -10,6 +10,7 @@ Dependencies
 * python-configobj
 * [python-elasticsearch]
 * python-pika
+* python-dateutil
 
 Building
 ========

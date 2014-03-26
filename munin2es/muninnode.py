@@ -19,6 +19,8 @@
 
 import json
 import socket
+import datetime
+from dateutil.tz import tzlocal
 
 class MuninNodeClient(object):
 	""" Connects to Munin Node, and provides easy access to its data. """
@@ -129,6 +131,9 @@ class MuninMessage(object):
 		self.hostname = hostname
 		self.config = config
 		self.values = values
+		self.timestamp = None
+		if timestamp:
+			self.timestamp = datetime.datetime.now(tzlocal()).isoformat()
 
 	def format(self, as_string=True, individual=True):
 		"""
@@ -146,6 +151,8 @@ class MuninMessage(object):
 				"key": key,
 				"value": value
 			}
+			if self.timestamp:
+				message['timestamp'] = self.timestamp
 			if as_string and individual:
 				messages.append(json.dumps(message))
 		if as_string and individual:
