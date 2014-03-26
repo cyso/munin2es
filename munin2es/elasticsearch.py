@@ -51,7 +51,7 @@ class BulkMessage(object):
 			What action to perform. See also the INDEX_ACTION, CREATE_ACTION, DELETE_ACTION, UPDATE_ACTION module
 			constants. Defaults to INDEX_ACTION.
 		datatype: string
-			What Elasticsearch type mapping to use. Optional.
+			What Elasticsearch type mapping to use. Mandatory.
 		id: string
 			What ID to index this message under. Optional, by default Elasticsearch will generate a new ID for all
 			indexed messages. Not applicable when using a list of dicts as input.
@@ -67,6 +67,7 @@ class BulkMessage(object):
 		if id:
 			metadata["_id"] = id
 
+		self.action = action
 		self.metadata = {}
 		self.metadata[action] = metadata
 
@@ -78,23 +79,21 @@ class BulkMessage(object):
 		Generate a JSON formatted Bulk API message, using the stored data in this BulkMessage.
 		"""
 
-		message = ""
+		metadata = "{0}".format(json.dumps(self.metadata))
 		if self.action == DELETE_ACTION:
-			return "{0}\n".format(json.dumps(self.metadata))
+			return metadata + "\n"
 
 		if not self.message:
 			raise TypeError("Message was not specified")
 
 		if isinstance(self.message, (list, tuple)):
 			if self.encode:
-				tmp = "\n".join(map(lambda x: json.dumps(x), self.message))
+				message = "\n{0}\n".format(metadata).join(map(lambda x: json.dumps(x), self.message))
 			else:
-				tmp = "\n".join(self.message)
+				message = "\n{0}\n".format(metadata).join(self.message)
 		elif self.encode:
-			tmp = json.dumps(self.message)
+			message = json.dumps(self.message)
 		else:
-			tmp = self.message
+			message = self.message
 
-		message = "{0}\n{1}\n".format(json.dumps(self.metadata), tmp)
-
-		return message
+		return "{0}\n{1}".format(metadata, message)
