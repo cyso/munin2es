@@ -17,37 +17,23 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import absolute_import
+import logging, logging.handlers, os
+from chaos.logging import get_logger
+from .muninnode import MuninNodeClient
+from .elasticsearch import BulkMessage
+
 NAME = "munin2es"
 VERSION = "0.1"
 BUILD = "AAAAA"
 
-THREADS = None
-INTERVAL = None
+def process_munin_client(node, port=4949):
+	client = MuninNodeClient(node, port)
+	messages = client.get_all_messages(preformat=True)
 
-import logging, logging.handlers, os
-from chaos.threads import Threads
-from chaos.scheduler import Scheduler
-from chaos.logging import get_logger
+	bulk = BulkMessage(index="munin-2014.03.25", message=messages, encode_message=False, datatype="munin")
 
-def initialize():
-	global THREADS, INTERVAL
-
-	get_logger(__name__).info("Initializing...")
-
-	if THREADS is None:
-		THREADS = Threads()
-
-	testThread = Scheduler(2, hello, "testThread", True, text="Hello")
-
-	THREADS.registerThread("test", testThread)
-
-	THREADS.startAll()
-
-def signal_handler(signum=None, frame=None):
-	global THREADS
-	if type(signum) != type(None):
-		get_logger(__name__).info("Caught signal {0}".format(signum))
-		THREADS.stopAll(exit=True)
+	print bulk.generate()
 
 def hello(text):
 	get_logger(__name__).info(text)
