@@ -24,6 +24,7 @@ from chaos.config import get_config, get_config_dir
 from chaos.logging import get_logger
 from .muninnode import MuninNodeClient
 from .elasticsearch import BulkMessage
+from .amqp import Queue, NORMAL_MESSAGE, PERSISTENT_MESSAGE
 
 NAME = "munin2es"
 VERSION = "0.1"
@@ -96,13 +97,20 @@ def reload_config():
 	AMQPROUTINGKEY = args.amqproutingkey
 	AMQPMESSAGEDURABLE = args.amqpmessagedurable
 
-def process_munin_client_to_bulk(node, port=4949, address=None):
+def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 	client = MuninNodeClient(node, port, address)
 	messages = client.get_all_messages(preformat=True)
 
-	bulk = BulkMessage(index="munin-2014.03.25", message=messages, encode_message=False, datatype="munin")
+	if index is None:
+		index = generate_index_name("munin", DAILY)
+	bulk = BulkMessage(index=index, message=messages, encode_message=False, datatype="munin")
 
 	return bulk
+
+def bulk_to_rabbitmq(message):
+	queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
+	queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+	queue.close()
 
 def hello(text):
 	get_logger(__name__).info(text)
