@@ -61,13 +61,13 @@ def reload_config():
 	QUIET = args.quiet
 	VERBOSE = args.verbose
 
-def process_munin_client(node, port=4949):
-	client = MuninNodeClient(node, port)
+def process_munin_client_to_bulk(node, port=4949, address=None):
+	client = MuninNodeClient(node, port, address)
 	messages = client.get_all_messages(preformat=True)
 
 	bulk = BulkMessage(index="munin-2014.03.25", message=messages, encode_message=False, datatype="munin")
 
-	print bulk.generate()
+	return bulk
 
 def hello(text):
 	get_logger(__name__).info(text)
