@@ -17,12 +17,63 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
+import json, datetime
+from dateutil.tz import tzlocal
+
+NONE="none"
+HOURLY="hour"
+DAILY="day"
+WEEKLY="week"
+MONTHLY="month"
+YEARLY="year"
 
 INDEX_ACTION = "index"
 CREATE_ACTION = "create"
 DELETE_ACTION = "delete"
 UPDATE_ACTION = "update"
+
+def generate_index_name(basename, timestamping="DAY"):
+	"""
+	Generate the index name based on a base name and timestamping type, and the current time.
+
+	This is basically an easy way to go from a "daily index named 'munin'" to
+	munin-YYYY.MM.DD.
+
+	Arguments
+	---------
+	basename: string
+		Base name of the index, used for the first part of the name.
+	timestamping: string
+		Type of timestamping of the index name, supported values are:
+		- none
+		- hour   (YYYY.MM.DD.HH)
+		- day    (YYYY.MM.DD)
+		- week   (YYYY.WW)
+		- month  (YYYY.MM)
+		- yearly (YYYY)
+		See also NONE, HOURLY, DAILY, WEEKLY,  MONTHLY AND YEARLY in this module
+	"""
+	now = datetime.datetime.now(tzlocal())
+	stamp = None
+	if timestamping == NONE:
+		stamp = None
+	elif timestamping == HOURLY:
+		stamp = now.strftime("%Y.%m.%d.%H")
+	elif timestamping == DAILY:
+		stamp = now.strftime("%Y.%m.%d")
+	elif timestamping == WEEKLY:
+		stamp = now.strftime("%Y.%W")
+	elif timestamping == MONTHLY:
+		stamp = now.strftime("%Y.%m")
+	elif timestamping == YEARLY:
+		stamp = now.strftime("%Y")
+	else:
+		raise TypeError("Invalid timestamping selected")
+
+	if stamp is None:
+		return basename
+	else:
+		return "{0}-{1}".format(basename, stamp)
 
 class BulkMessage(object):
 	"""
