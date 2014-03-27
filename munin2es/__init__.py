@@ -109,7 +109,11 @@ def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 
 def bulk_to_rabbitmq(message):
 	queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
-	queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+	if isinstance(message, list):
+		for m in message:
+			queue.publish("".join(m), { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+	else:
+			queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
 	queue.close()
 
 def hello(text):

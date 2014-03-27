@@ -125,26 +125,45 @@ class BulkMessage(object):
 		self.encode = encode_message
 		self.message = message
 
-	def generate(self):
+	def generate(self, as_objects=False):
 		"""
 		Generate a JSON formatted Bulk API message, using the stored data in this BulkMessage.
+
+		Parameters
+		----------
+		as_objects: boolean
+			If True, this method will return tuples containing (metadata, message), instead of
+			a single string of information. Both entries are strings ending in a newline, and will form a
+			valid Elasticsearch Bulk API message when concatenated together.
 		"""
 
 		metadata = "{0}".format(json.dumps(self.metadata))
 		if self.action == DELETE_ACTION:
-			return metadata + "\n"
+			if as_objects:
+				return (metadata + "\n", "")
+			else:
+				return metadata + "\n"
 
 		if not self.message:
 			raise TypeError("Message was not specified")
 
+		message_list = []
+
 		if isinstance(self.message, (list, tuple)):
 			if self.encode:
-				message = "\n{0}\n".format(metadata).join(map(lambda x: json.dumps(x), self.message))
+				message_list = map(lambda x: json.dumps(x) + "\n", self.message)
 			else:
-				message = "\n{0}\n".format(metadata).join(self.message)
+				message_list = map(lambda x: x + "\n", self.message)
 		elif self.encode:
-			message = json.dumps(self.message)
+			message_list = [ json.dumps(self.message) + "\n" ]
 		else:
-			message = self.message
+			message_list = [ self.message + "\n" ]
 
-		return "{0}\n{1}".format(metadata, message)
+		metadata_list = [ metadata + "\n" ] * len(message_list)
+		full_message = zip(metadata_list, message_list)
+
+		if as_objects:
+			return full_message
+		else:
+			full_message = map(lambda x: "".join(x), full_message)
+			return "".join(full_message)
