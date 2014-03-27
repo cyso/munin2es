@@ -30,17 +30,34 @@ VERSION = "0.1"
 BUILD = "AAAAA"
 
 STARTARG = None
+QUIET = None
+VERBOSE = None
 
 HOSTDIR = None
 WORKERS = None
-QUIET = None
-VERBOSE = None
+
+AMQPHOST = None
+AMQPCREDENTIALS = None
+AMQPEXCHANGE = None
+AMQPROUTINGKEY = None
+AMQPMESSAGEDURABLE = None
 
 def parse_cli_args(config):
 	arg_parser = get_config_argparse()
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
-	arg_parser.add_argument("--hostdir",	metavar="HDIR",		type=str,	default=config.get("hostdir", None),	help="Directory that contains host configuration files.")
-	arg_parser.add_argument("--workers",	metavar="W",		type=int,	default=config.get("workers", 10),		help="How many worker processes to spawn.")
+	arg_parser.add_argument("--hostdir",		metavar="HDIR",		type=str,	default=config.get("hostdir", None),				help="Directory that contains host configuration files.")
+	arg_parser.add_argument("--workers",		metavar="W",		type=int,	default=config.get("workers", 10),					help="How many worker processes to spawn.")
+	arg_parser.add_argument("--amqphost",		metavar="AH",		type=str,	default=config.get("amqphost", None),				help="AMQP hostname.")
+	arg_parser.add_argument("--amqpport",		metavar="AP",		type=int,	default=config.get("amqpport", 5672),				help="AMQP port.")
+	arg_parser.add_argument("--amqpuser",		metavar="AU",		type=str,	default=config.get("amqpuser", None),				help="AMQP username.")
+	arg_parser.add_argument("--amqppass",		metavar="APW",		type=str,	default=config.get("amqppass", None),				help="AMQP password. Note that this might be visible in ps output!")
+	arg_parser.add_argument("--amqpvhost",		metavar="AV",		type=str,	default=config.get("amqpvhost", "/"),				help="AMQP vhost.")
+	arg_parser.add_argument("--amqpexchange",	metavar="AE",		type=str,	default=config.get("amqpexchange", "munin2es"),		help="AMQP exchange.")
+	arg_parser.add_argument("--amqproutingkey",	metavar="ARK",		type=str,	default=config.get("amqproutingkey", "munin2es"),	help="AMQP routing key.")
+	arg_parser.add_argument("--amqppassive",	action="store_true",			default=config.get("amqppassive", False),			help="AMQP exchange creation passivity.")
+	arg_parser.add_argument("--amqpexchangedurable",	action="store_true",		default=config.get("amqpexchangedurable", False),		help="AMQP exchange durability.")
+	arg_parser.add_argument("--amqpautodelete",	action="store_true",			default=config.get("amqpautodelete", False),		help="AMQP exchange auto-delete.")
+	arg_parser.add_argument("--amqpmessagedurable",	action="store_true",		default=config.get("amqpmessagedurable", False),		help="AMQP message durability.")
 
 	args = arg_parser.parse_args()
 
@@ -51,15 +68,33 @@ def parse_cli_args(config):
 	return args
 
 def reload_config():
-	global STARTARG, HOSTDIR, QUIET, VERBOSE
+	global STARTARG, QUIET, VERBOSE
+	global HOSTDIR, WORKERS
+	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
 	config = get_config(STARTARG)
 	args = parse_cli_args(config)
 
-	HOSTDIR = args.hostdir
-	WORKERS = args.workers
 	QUIET = args.quiet
 	VERBOSE = args.verbose
+
+	HOSTDIR = args.hostdir
+	WORKERS = args.workers
+
+	AMQPHOST = (args.amqphost, args.amqpport)
+	AMQPCREDENTIALS = (args.amqpuser, args.amqppass)
+	AMQPEXCHANGE = {
+		"exchange": args.amqpexchange,
+		"exchange_type": "direct",
+		"passive": args.amqppassive
+	}
+	if not args.amqppassive:
+		AMQPEXCHANGE.update({
+			"durable": args.amqpexchangedurable,
+			"auto_delete": args.amqpautodelete
+		})
+	AMQPROUTINGKEY = args.amqproutingkey
+	AMQPMESSAGEDURABLE = args.amqpmessagedurable
 
 def process_munin_client_to_bulk(node, port=4949, address=None):
 	client = MuninNodeClient(node, port, address)
