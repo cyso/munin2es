@@ -18,7 +18,9 @@
 #
 
 from __future__ import absolute_import
-import logging, logging.handlers, os
+import logging, logging.handlers, os, sys
+from chaos.arguments import get_config_argparse
+from chaos.config import get_config, get_config_dir
 from chaos.logging import get_logger
 from .muninnode import MuninNodeClient
 from .elasticsearch import BulkMessage
@@ -26,6 +28,38 @@ from .elasticsearch import BulkMessage
 NAME = "munin2es"
 VERSION = "0.1"
 BUILD = "AAAAA"
+
+STARTARG = None
+
+HOSTDIR = None
+WORKERS = None
+QUIET = None
+VERBOSE = None
+
+def parse_cli_args(config):
+	arg_parser = get_config_argparse()
+	arg_parser.description = "{0} is n interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
+	arg_parser.add_argument("--hostdir",	metavar="HDIR",		type=str,	default=config.get("hostdir", None),	help="Directory that contains configuration files.")
+	arg_parser.add_argument("--workers",	metavar="W",		type=int,	default=config.get("workers", 10),		help="How many worker processes to spawn.")
+
+	args = arg_parser.parse_args()
+
+	if args.hostdir == None:
+		get_logger(__name__).error("No hostdir specified, nothing to do...")
+		sys.exit(0)
+
+	return args
+
+def reload_config():
+	global STARTARG, HOSTDIR, QUIET, VERBOSE
+
+	config = get_config(STARTARG)
+	args = parse_cli_args(config)
+
+	HOSTDIR = args.hostdir
+	WORKERS = args.workers
+	QUIET = args.quiet
+	VERBOSE = args.verbose
 
 def process_munin_client(node, port=4949):
 	client = MuninNodeClient(node, port)
