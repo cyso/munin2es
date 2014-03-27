@@ -38,8 +38,8 @@ VERBOSE = None
 
 def parse_cli_args(config):
 	arg_parser = get_config_argparse()
-	arg_parser.description = "{0} is n interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
-	arg_parser.add_argument("--hostdir",	metavar="HDIR",		type=str,	default=config.get("hostdir", None),	help="Directory that contains configuration files.")
+	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
+	arg_parser.add_argument("--hostdir",	metavar="HDIR",		type=str,	default=config.get("hostdir", None),	help="Directory that contains host configuration files.")
 	arg_parser.add_argument("--workers",	metavar="W",		type=int,	default=config.get("workers", 10),		help="How many worker processes to spawn.")
 
 	args = arg_parser.parse_args()
