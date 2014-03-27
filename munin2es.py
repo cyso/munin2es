@@ -25,8 +25,10 @@ setproctitle.setproctitle("munin2es")
 import logging
 from argparse import ArgumentParser
 import munin2es
-from munin2es import process_munin_client
+from munin2es import process_munin_client_to_bulk, bulk_to_rabbitmq
+from munin2es.elasticsearch import generate_index_name, DAILY
 from chaos.arguments import get_config_arguments
+from chaos.config import get_config_dir
 from chaos.logging import get_logger
 
 ## Initialize root logger with default handlers
@@ -34,9 +36,7 @@ get_logger(None, level=logging.INFO, handlers={"syslog": None, "console": None})
 
 (config_arg, config_unknown) = get_config_arguments()
 
-print config_arg
-print config_unknown
-
+## Set log handling based on initial configuration
 log_handlers = {}
 if not config_arg.version and not config_arg.help:
 	log_handlers['syslog'] = None
@@ -58,13 +58,23 @@ if config_arg.version:
 	logger.info("{0} version {1} ({2})".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
 	sys.exit(0)
 
+munin2es.STARTARG = config_arg
+munin2es.reload_config()
+
 if not config_arg.help:
 	logger.info("{0} version {1} ({2}) starting...".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
 
-munin2es.STARTARG = config_arg
+hostconfig = get_config_dir(munin2es.HOSTDIR)
 
-munin2es.reload_config()
-print munin2es.HOSTDIR
-print munin2es.WORKERS
-
-#process_munin_client(node="localhost", port=4949)
+for (host, config) in hostconfig.iteritems():
+	logger.info("Starting fetch run for {0}".format(host))
+	address = host
+	port = 4949
+	if "address" in config:
+		address = config['address']
+	if "port" in config:
+		port = config['port']
+	logger.debug("- Using address: {0}, port: {1}".format(address, port))
+	index = generate_index_name("munin", DAILY)
+	bulk = process_munin_client_to_bulk(node=host, port=4949, address=address, index=index)
+	bulk_to_rabbitmq(message=bulk.generate(as_objects=True))
