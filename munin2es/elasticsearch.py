@@ -17,8 +17,10 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import absolute_import
 import json, datetime
 from dateutil.tz import tzlocal
+from elasticsearch import Elasticsearch
 
 NONE="none"
 HOURLY="hour"
@@ -74,6 +76,48 @@ def generate_index_name(basename, timestamping="DAY"):
 		return basename
 	else:
 		return "{0}-{1}".format(basename, stamp)
+
+def create_river_config(river, name, config, host="localhost", port=9200):
+	"""
+	Saves the given Elasticsearch River configuration in Elasticsearch.
+
+	The given river type and name are formatted like "$river-$name" to form the type name.
+
+	Arguments
+	---------
+	river: string
+		Name of the River plugin to use.
+	name: string
+		Name of this instance of the River plugin.
+	config: JSON-formatted string or dict
+		Configuration of the River. The contents is not validated, and passed as-is to Elasticsearch.
+	host: string
+		Elasticsearch host to connect to, defaults to localhost.
+	port: int
+		Elasticsearch port to connect to, defaults to 9200.
+	"""
+	es = Elasticsearch(hosts=[{ "host": host, "port": port }])
+	es.index(index="_river", doc_type="{0}-{1}".format(river, name), body=config, id="_meta")
+
+def delete_river_config(river, name, host="localhost", port=9200):
+	"""
+	Removes the given Elasticsearch River configuration from Elasticsearch.
+
+	The given river type and name are formatted like "$river-$name" to form the type name.
+
+	Arguments
+	---------
+	river: string
+		Name of the River plugin to use.
+	name: string
+		Name of this instance of the River plugin.
+	host: string
+		Elasticsearch host to connect to, defaults to localhost.
+	port: int
+		Elasticsearch port to connect to, defaults to 9200.
+	"""
+	es = Elasticsearch(hosts=[{ "host": host, "port": port }])
+	es.delete(index="_river", doc_type="{0}-{1}".format(river, name), id=None)
 
 class BulkMessage(object):
 	"""
