@@ -66,3 +66,4 @@ hostconfig = get_config_dir(munin2es.HOSTDIR)
 
 for (host, config) in hostconfig.iteritems():
 	process_munin_node(host, config)
+logger.info("All done!")
