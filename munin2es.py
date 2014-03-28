@@ -18,15 +18,13 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys, signal, time, setproctitle
+import sys, signal, time, setproctitle, logging
 
 setproctitle.setproctitle("munin2es")
 
-import logging
 from argparse import ArgumentParser
 import munin2es
-from munin2es import process_munin_client_to_bulk, bulk_to_rabbitmq
-from munin2es.elasticsearch import generate_index_name, DAILY
+from munin2es import process_munin_node
 from chaos.arguments import get_config_arguments
 from chaos.config import get_config_dir
 from chaos.logging import get_logger
@@ -67,14 +65,4 @@ if not config_arg.help:
 hostconfig = get_config_dir(munin2es.HOSTDIR)
 
 for (host, config) in hostconfig.iteritems():
-	logger.info("Starting fetch run for {0}".format(host))
-	address = host
-	port = 4949
-	if "address" in config:
-		address = config['address']
-	if "port" in config:
-		port = config['port']
-	logger.debug("- Using address: {0}, port: {1}".format(address, port))
-	index = generate_index_name("munin", DAILY)
-	bulk = process_munin_client_to_bulk(node=host, port=4949, address=address, index=index)
-	bulk_to_rabbitmq(message=bulk.generate(as_objects=True))
+	process_munin_node(host, config)

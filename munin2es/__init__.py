@@ -23,7 +23,7 @@ from chaos.arguments import get_config_argparse
 from chaos.config import get_config, get_config_dir
 from chaos.logging import get_logger
 from .muninnode import MuninNodeClient
-from .elasticsearch import BulkMessage
+from .elasticsearch import BulkMessage, generate_index_name, DAILY
 from .amqp import Queue, NORMAL_MESSAGE, PERSISTENT_MESSAGE
 
 NAME = "munin2es"
@@ -115,6 +115,20 @@ def bulk_to_rabbitmq(message):
 	else:
 			queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
 	queue.close()
+
+def process_munin_node(host, config):
+	logger = get_logger(__name__)
+	logger.info("Starting fetch run for {0}".format(host))
+	address = host
+	port = 4949
+	if "address" in config:
+		address = config['address']
+	if "port" in config:
+		port = config['port']
+	logger.debug("- Using address: {0}, port: {1}".format(address, port))
+	index = generate_index_name("munin", DAILY)
+	bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
+	bulk_to_rabbitmq(message=bulk.generate(as_objects=True))
 
 def hello(text):
 	get_logger(__name__).info(text)
