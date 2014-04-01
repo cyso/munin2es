@@ -58,7 +58,8 @@ def parse_cli_args(config):
 	arg_parser.add_argument("--amqppassive",	action="store_true",			default=config.get("amqppassive", False),			help="AMQP exchange creation passivity.")
 	arg_parser.add_argument("--amqpexchangedurable",	action="store_true",		default=config.get("amqpexchangedurable", False),		help="AMQP exchange durability.")
 	arg_parser.add_argument("--amqpautodelete",	action="store_true",			default=config.get("amqpautodelete", False),		help="AMQP exchange auto-delete.")
-	arg_parser.add_argument("--amqpmessagedurable",	action="store_true",		default=config.get("amqpmessagedurable", False),		help="AMQP message durability.")
+	arg_parser.add_argument("--amqpmessagedurable",	action="store_true",		default=config.get("amqpmessagedurable", False),	help="AMQP message durability.")
+	arg_parser.add_argument("--debug",			action="store_true",			default=config.get("debug", False),					help="When used with verbose, also debug backend library logging messages.")
 
 	args = arg_parser.parse_args()
 
@@ -69,7 +70,7 @@ def parse_cli_args(config):
 	return args
 
 def reload_config():
-	global STARTARG, QUIET, VERBOSE
+	global STARTARG, QUIET, VERBOSE, DEBUG
 	global HOSTDIR, WORKERS
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
@@ -78,6 +79,7 @@ def reload_config():
 
 	QUIET = args.quiet
 	VERBOSE = args.verbose
+	DEBUG = args.debug
 
 	HOSTDIR = args.hostdir
 	WORKERS = args.workers

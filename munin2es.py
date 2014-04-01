@@ -59,6 +59,13 @@ if config_arg.version:
 munin2es.STARTARG = config_arg
 munin2es.reload_config()
 
+## The backend loggers for urllib, elasticsearch and pika are really chatty, let's limit them unless --verbose and --debug are both set
+if not (munin2es.VERBOSE and munin2es.DEBUG):
+	get_logger("urllib3.connectionpool", level=logging.ERROR)
+	get_logger("elasticsearch", level=logging.ERROR)
+	get_logger("pika.adapters.base_connection", level=logging.ERROR)
+	get_logger("pika", level=logging.WARNING)
+
 if not config_arg.help:
 	logger.info("{0} version {1} ({2}) starting...".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
 
