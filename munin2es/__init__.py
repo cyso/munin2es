@@ -129,17 +129,6 @@ def bulk_to_rabbitmq(message):
 	queue.close()
 
 def process_munin_node(host, config):
-	logger = get_logger(__name__)
-	logger.info("Starting fetch run for {0}".format(host))
-	address = host
-	port = 4949
-	if "address" in config:
-		address = config['address']
-	if "port" in config:
-		port = config['port']
-	logger.debug("- Using address: {0}, port: {1}".format(address, port))
-	index = generate_index_name("munin", DAILY)
-	bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
 	bulk_to_rabbitmq(message=bulk.generate(as_objects=True))
 
 def dispatcher():
@@ -154,10 +143,10 @@ def dispatcher():
 	logger = get_logger(__name__ + ".dispatcher")
 	logger.info("Dispatcher starting...")
 
-	#for i in range(WORKERS):
-	#	name = "munin-{0}".format(str(i))
-	#	p = Process(target=munin_worker, args=(name, munin_queue, done_queue))
-	#	workers.registerWorker(name, p)
+	for i in range(WORKERS):
+		name = "munin-{0}".format(str(i))
+		p = Process(target=munin_worker, args=(name, munin_queue, done_queue))
+		workers.registerWorker(name, p)
 
 	#for i in range(1):
 	#	name = "message-{0}".format(str(i))
@@ -166,7 +155,7 @@ def dispatcher():
 
 	for i in range(WORKERS):
 		name = "test-{0}".format(str(i))
-		p = Process(name=name, target=test_worker, args=(name, munin_queue, done_queue))
+		p = Process(name=name, target=test_worker, args=(name, message_queue, done_queue))
 		workers.registerWorker(name, p)
 
 	RELOADCONFIG = True
@@ -193,7 +182,7 @@ def dispatcher():
 					munin_queue.put((host, config))
 					timestamps[host] = (now, False)
 					logger.debug("Queued munin work for {0}".format(host))
-				elif (now - timestamps[host][0]).total_seconds() > (INTERVAL * 1) and not timestamps[host][1]:
+				elif (now - timestamps[host][0]).total_seconds() > (INTERVAL * 4) and not timestamps[host][1]:
 					munin_queue.put((host, config))
 					timestamps[host] = (now, False)
 					logger.warning("No response received for host {0}, requeued".format(host))
@@ -211,7 +200,7 @@ def dispatcher():
 				# Do error stuff
 				pass
 			elif item[0] == "munin":
-				message_queue.put(item[2])
+				message_queue.put((item[1], item[2]))
 				logger.debug("Dispatched message for host {0}".format(item[1]))
 			elif item[0] == "message":
 				# Do stuff after successful message
@@ -242,12 +231,38 @@ def dispatcher():
 	logger.info("Passing STOP messages to workers")
 	for i in range(WORKERS):
 		munin_queue.put("STOP")
-	for i in range(1):
+	for i in range(WORKERS):
 		message_queue.put("STOP")
 
 def munin_worker(name, work, response):
 	""" Work thread, handles connections to Munin and fetching of details. """
-	pass
+	logger = get_logger("{0}.{1}.{2}".format(__name__, "munin_worker", name))
+	while True:
+		try:
+			item = work.get(block=True, timeout=5)
+		except Empty, e:
+			# No work is no cause for panic, dear.
+			continue
+
+		logger.debug(item)
+		if item == "STOP":
+			break
+		host, config = item
+
+		logger.info("Fetching Munin info from {0}".format(host))
+		address = host
+		port = 4949
+		if "address" in config:
+			address = config['address']
+		if "port" in config:
+			port = config['port']
+
+		logger.debug("- Using address: {0}, port: {1}".format(address, port))
+		index = generate_index_name("munin", DAILY)
+		bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
+
+		response.put(("munin", host, bulk.generate(as_objects=True)))
+	logger.debug("Exiting loop")
 
 def message_worker(name, work, response):
 	""" Message thread, handles sending Munin information to AMQP. """
@@ -255,17 +270,20 @@ def message_worker(name, work, response):
 
 def test_worker(name, work, response):
 	""" Testing thread. """
+	logger = get_logger("{0}.{1}.{2}".format(__name__, "test_worker", name))
 	while (True):
 		try:
 			item = work.get(block=True, timeout=5)
-
-			get_logger(__name__ + ".test_worker." + name).debug(item)
-
-			if item == "STOP":
-				break
 		except Empty, e:
 			# No work is no cause for panic, dear.
-			pass
+			continue
+
+		item = str(item)
+		item = (item[:75] + '..') if len(item) > 75 else item
+		logger.debug(item)
+		if item == "STOP":
+			break
+	logger.debug("Exiting loop")
 
 def kill_handler(signum=None, frame=None):
 	global STOP
