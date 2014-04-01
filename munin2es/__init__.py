@@ -119,18 +119,6 @@ def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 
 	return bulk
 
-def bulk_to_rabbitmq(message):
-	queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
-	if isinstance(message, list):
-		for m in message:
-			queue.publish("".join(m), { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
-	else:
-			queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
-	queue.close()
-
-def process_munin_node(host, config):
-	bulk_to_rabbitmq(message=bulk.generate(as_objects=True))
-
 def dispatcher():
 	""" Main worker, responsible for mainting Queues and distributing work. """
 	global RELOADCONFIG, STOP
@@ -146,18 +134,18 @@ def dispatcher():
 
 	for i in range(WORKERS):
 		name = "munin-{0}".format(str(i))
-		p = Process(target=munin_worker, args=(name, munin_queue, done_queue))
+		p = Process(name=name, target=munin_worker, args=(name, munin_queue, done_queue))
+		workers.registerWorker(name, p)
+
+	for i in range(1):
+		name = "message-{0}".format(str(i))
+		p = Process(name=name, target=message_worker, args=(name, message_queue, done_queue))
 		workers.registerWorker(name, p)
 
 	#for i in range(1):
-	#	name = "message-{0}".format(str(i))
-	#	p = Process(target=message_worker, args=(name, message_queue, done_queue))
+	#	name = "test-{0}".format(str(i))
+	#	p = Process(name=name, target=test_worker, args=(name, message_queue, done_queue))
 	#	workers.registerWorker(name, p)
-
-	for i in range(WORKERS):
-		name = "test-{0}".format(str(i))
-		p = Process(name=name, target=test_worker, args=(name, message_queue, done_queue))
-		workers.registerWorker(name, p)
 
 	RELOADCONFIG = True
 	timestamps = {}
@@ -204,8 +192,8 @@ def dispatcher():
 				message_queue.put((item[1], item[2]))
 				logger.debug("Dispatched message for host {0}".format(item[1]))
 			elif item[0] == "message":
-				# Do stuff after successful message
-				pass
+				timestamps[item[1]] = (timestamps[item[1]][0], True)
+				logger.debug("Marked {0} as successful".format(item[1]))
 			else:
 				logger.error("Received a done message with unknown type: {0}".format(item[0]))
 
@@ -232,7 +220,7 @@ def dispatcher():
 	logger.info("Passing STOP messages to workers")
 	for i in range(WORKERS):
 		munin_queue.put("STOP")
-	for i in range(WORKERS):
+	for i in range(1):
 		message_queue.put("STOP")
 
 def munin_worker(name, work, response):
@@ -267,7 +255,34 @@ def munin_worker(name, work, response):
 
 def message_worker(name, work, response):
 	""" Message thread, handles sending Munin information to AMQP. """
-	pass
+	logger = get_logger("{0}.{1}.{2}".format(__name__, "message_worker", name))
+	logger.info("Opening AMQP connection to {0}".format(AMQPHOST))
+	queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
+
+	while True:
+		try:
+			item = work.get(block=True, timeout=5)
+		except Empty, e:
+			# No work is no cause for panic, dear.
+			continue
+
+		if item == "STOP":
+			break
+		host, message = item
+
+		logger.info("Sending AMQP message for host {0}".format(host))
+
+		if isinstance(message, list):
+			for m in message:
+				queue.publish("".join(m), { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+		else:
+			queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+
+		response.put(("message", host))
+
+	logger.info("Closing AMQP connection")
+	queue.close()
+	logger.debug("Done")
 
 def test_worker(name, work, response):
 	""" Testing thread. """
