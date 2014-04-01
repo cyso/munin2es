@@ -17,10 +17,11 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+""" AMQP related classes and functions. """
+
 import logging
-import munin2es
 import pika
-from pika.exceptions import AMQPConnectionError, ChannelClosed
+from pika.exceptions import ChannelClosed
 
 NORMAL_MESSAGE = 1
 PERSISTENT_MESSAGE = 2
@@ -61,14 +62,17 @@ class Queue(object):
 		try:
 			self.logger.debug("Declaring exchange {0}".format(self.exchange_name))
 			self.channel.exchange_declare(**exchange)
-		except ChannelClosed, e:
-			raise Exception(str(e[1]))
+		except ChannelClosed, cce:
+			raise Exception(str(cce[1]))
 	
 	def close(self):
+		"""
+		Closes the internal connection.
+		"""
 		self.logger.debug("Closing AMQP connection")
 		self.connection.close()
 	
-	def publish(self, message, properties={}):
+	def publish(self, message, properties=None):
 		"""
 		Publish a message to an AMQP exchange.
 
@@ -84,6 +88,8 @@ class Queue(object):
 				set by specifying PERSISTENT_MESSAGE .
 		"""
 		routing_key = self.default_routing_key
+		if properties is None:
+			properties = {}
 		if properties and "routing_key" in properties:
 			routing_key = properties["routing_key"]
 			del(properties["routing_key"])

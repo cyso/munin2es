@@ -17,11 +17,23 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+""" munin-node related classes and functions. """
+
 import logging
 import json
 import socket
 import datetime
 from dateutil.tz import tzlocal
+
+def mangle_config(config):
+	""" Mangle configuration data, and format it differently. """
+	output = { "graph": { }, "specific": { } }
+	for key, value in config.iteritems():
+		if key.startswith("graph_"):
+			output["graph"][key.replace("graph_", "", 1)] = value
+		elif isinstance(value, dict):
+			output["specific"][key] = value
+	return output
 
 class MuninNodeClient(object):
 	""" Connects to Munin Node, and provides easy access to its data. """
@@ -35,9 +47,11 @@ class MuninNodeClient(object):
 		self.logger = logging.getLogger(__name__)
 
 	def _readline(self):
+		""" Reads one line from the internal connection. """
 		return self.file.readline().strip()
 
 	def _iterline(self):
+		""" Iterates over the internal connection. """
 		while True:
 			line = self._readline()
 			if not line:
@@ -90,19 +104,9 @@ class MuninNodeClient(object):
 					ret[key] = {}
 				ret[key][prop] = value
 		if mangle:
-			return self._mangle_config(ret)
+			return mangle_config(ret)
 		else:
 			return ret
-
-	def _mangle_config(self, config):
-		""" Mangle the configuration data, and format it differently. """
-		output = { "graph": { }, "specific": { } }
-		for key, value in config.iteritems():
-			if key.startswith("graph_"):
-				output["graph"][key.replace("graph_", "", 1)] = value
-			elif isinstance(value, dict):
-				output["specific"][key] = value
-		return output
 
 	def get_all_messages(self, preformat=True, **kwargs):
 		""" Retrieve all module values as MuninMessage. If preformat is True, kwargs is passed to MuninMessage.format()"""
@@ -130,8 +134,13 @@ class MuninNodeClient(object):
 class MuninMessage(object):
 	""" Format Munin Node output into (JSON) messages. """
 
-	def __init__(self, hostname, module, config={}, values={}, timestamp=True):
+	def __init__(self, hostname, module, config=None, values=None, timestamp=True):
 		""" Initialize a new MuninMessage for the given configuration and values. """
+		if config is None:
+			config = {}
+		if values is None:
+			values = {}
+
 		self.hostname = hostname
 		self.module = module
 		self.config = config

@@ -18,15 +18,15 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys, signal, time, setproctitle, logging
+""" Main executable for munin2es. """
+
+import sys, signal, setproctitle, logging
 
 setproctitle.setproctitle("munin2es")
 
-from argparse import ArgumentParser
 import munin2es
-from munin2es import process_munin_node, dispatcher
+from munin2es import dispatcher
 from chaos.arguments import get_config_arguments
-from chaos.config import get_config_dir
 from chaos.logging import get_logger
 
 ## Initialize root logger with default handlers

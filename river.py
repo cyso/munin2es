@@ -18,6 +18,8 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+""" Helper tool for munin2es to handle Elasticsearch River configurations. """
+
 import sys, signal, time, setproctitle
 
 setproctitle.setproctitle("munin2es-river")
@@ -38,7 +40,8 @@ arg_parser.add_argument("--settings",	metavar="S", required=False, type=str, def
 arg_parser.add_argument("--river", 		metavar="R", required=True,  type=str, default=None, help="Name of the River plugin to configure.")
 arg_parser.add_argument("--name",		metavar="N", required=True,  type=str, default=None, help="Name of the River plugin instance.")
 arg_parser.add_argument("--action",		metavar="A", required=True,  type=str, default=None, help="Action to perform: create|delete.")
-arg_parser.add_argument("--host",		metavar="H", required=False, type=str, default="localhost", help="What Elasticsearch host to connect to. Defaults to localhost.")
+arg_parser.add_argument("--host",		metavar="H", required=False, type=str, default="localhost", 
+		help="What Elasticsearch host to connect to. Defaults to localhost.")
 arg_parser.add_argument("--port",		metavar="P", required=False, type=int, default=9200, help="What Elasticsearch port to connect to. Defaults to 9200.")
 
 args = arg_parser.parse_args()

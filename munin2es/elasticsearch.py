@@ -17,17 +17,19 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+""" Elasticsearch related classes and functions. """
+
 from __future__ import absolute_import
 import json, datetime, logging
 from dateutil.tz import tzlocal
 from elasticsearch import Elasticsearch
 
-NONE="none"
-HOURLY="hour"
-DAILY="day"
-WEEKLY="week"
-MONTHLY="month"
-YEARLY="year"
+NONE = "none"
+HOURLY = "hour"
+DAILY = "day"
+WEEKLY = "week"
+MONTHLY = "month"
+YEARLY = "year"
 
 INDEX_ACTION = "index"
 CREATE_ACTION = "create"
@@ -96,8 +98,8 @@ def create_river_config(river, name, config, host="localhost", port=9200):
 	port: int
 		Elasticsearch port to connect to, defaults to 9200.
 	"""
-	es = Elasticsearch(hosts=[{ "host": host, "port": port }])
-	es.index(index="_river", doc_type="{0}-{1}".format(river, name), body=config, id="_meta")
+	elastic = Elasticsearch(hosts=[{ "host": host, "port": port }])
+	elastic.index(index="_river", doc_type="{0}-{1}".format(river, name), body=config, id="_meta")
 
 def delete_river_config(river, name, host="localhost", port=9200):
 	"""
@@ -116,8 +118,8 @@ def delete_river_config(river, name, host="localhost", port=9200):
 	port: int
 		Elasticsearch port to connect to, defaults to 9200.
 	"""
-	es = Elasticsearch(hosts=[{ "host": host, "port": port }])
-	es.delete(index="_river", doc_type="{0}-{1}".format(river, name), id=None)
+	elastic = Elasticsearch(hosts=[{ "host": host, "port": port }])
+	elastic.delete(index="_river", doc_type="{0}-{1}".format(river, name), id=None)
 
 class BulkMessage(object):
 	"""
@@ -126,7 +128,7 @@ class BulkMessage(object):
 	See also: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
 	"""
 
-	def __init__(self, index, message=None, action=INDEX_ACTION, datatype=None, id=None, encode_message=True):
+	def __init__(self, index, message=None, action=INDEX_ACTION, datatype=None, identifier=None, encode_message=True):
 		"""
 		Initialize a BulkMessage, and set all properties.
 
@@ -147,7 +149,7 @@ class BulkMessage(object):
 			constants. Defaults to INDEX_ACTION.
 		datatype: string
 			What Elasticsearch type mapping to use. Mandatory.
-		id: string
+		identifier: string
 			What ID to index this message under. Optional, by default Elasticsearch will generate a new ID for all
 			indexed messages. Not applicable when using a list of dicts as input.
 		encode_message: boolean
@@ -160,7 +162,7 @@ class BulkMessage(object):
 		if datatype:
 			metadata["_type"] = datatype
 		if id:
-			metadata["_id"] = id
+			metadata["_id"] = identifier
 
 		self.action = action
 		self.metadata = {}

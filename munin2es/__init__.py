@@ -36,6 +36,7 @@ BUILD = "AAAAA"
 STARTARG = None
 QUIET = None
 VERBOSE = None
+DEBUG = None
 
 HOSTDIR = None
 WORKERS = None
@@ -52,6 +53,7 @@ RELOADCONFIG = False
 STOP = False
 
 def parse_cli_args(config):
+	""" Builds an ArgumentParser to parse incoming CLI arguments. Also performs some validation. """
 	arg_parser = get_config_argparse()
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
 	arg_parser.add_argument("--interval",		metavar="INT",		type=int,	default=config.get("interval", 5*60),				help="Minimum interval between Munin fetches.")
@@ -79,7 +81,8 @@ def parse_cli_args(config):
 	return args
 
 def reload_config():
-	global STARTARG, QUIET, VERBOSE, DEBUG
+	""" (Re-)read config and cli arguments, and set them internally. """
+	global QUIET, VERBOSE, DEBUG
 	global HOSTDIR, WORKERS, INTERVAL
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
@@ -110,6 +113,7 @@ def reload_config():
 	AMQPMESSAGEDURABLE = args.amqpmessagedurable
 
 def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
+	""" Convenience methode to call MuninNodeClient and process its output into a BulkMessage. """
 	client = MuninNodeClient(node, port, address)
 	messages = client.get_all_messages(preformat=True)
 
@@ -121,7 +125,7 @@ def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 
 def dispatcher():
 	""" Main worker, responsible for mainting Queues and distributing work. """
-	global RELOADCONFIG, STOP
+	global RELOADCONFIG
 
 	manager = Manager()
 	munin_queue = manager.Queue()
@@ -134,18 +138,13 @@ def dispatcher():
 
 	for i in range(WORKERS):
 		name = "munin-{0}".format(str(i))
-		p = Process(name=name, target=munin_worker, args=(name, munin_queue, done_queue))
-		workers.registerWorker(name, p)
+		process = Process(name=name, target=munin_worker, args=(name, munin_queue, done_queue))
+		workers.registerWorker(name, process)
 
 	for i in range(1):
 		name = "message-{0}".format(str(i))
-		p = Process(name=name, target=message_worker, args=(name, message_queue, done_queue))
-		workers.registerWorker(name, p)
-
-	#for i in range(1):
-	#	name = "test-{0}".format(str(i))
-	#	p = Process(name=name, target=test_worker, args=(name, message_queue, done_queue))
-	#	workers.registerWorker(name, p)
+		process = Process(name=name, target=message_worker, args=(name, message_queue, done_queue))
+		workers.registerWorker(name, process)
 
 	RELOADCONFIG = True
 	timestamps = {}
@@ -181,8 +180,8 @@ def dispatcher():
 		while True:
 			try:
 				item = done_queue.get(block=False)
-			except Empty, e:
-				logger.debug("Done queue was empty.")
+			except Empty:
+				logger.debug("Message queue was empty.")
 				break
 
 			if item[0] == "error":
@@ -206,14 +205,14 @@ def dispatcher():
 	try:
 		while not munin_queue.empty():
 			munin_queue.get(block=False)
-	except Empty, e:
+	except Empty:
 		# We're cleaning up, no need to handle this error
 		pass
 
 	try:
 		while not message_queue.empty():
 			message_queue.get(block=False)
-	except Empty, e:
+	except Empty:
 		# We're cleaning up, no need to handle this error
 		pass
 
@@ -232,7 +231,7 @@ def munin_worker(name, work, response):
 	while True:
 		try:
 			item = work.get(block=True, timeout=5)
-		except Empty, e:
+		except Empty:
 			# No work is no cause for panic, dear.
 			continue
 
@@ -265,7 +264,7 @@ def message_worker(name, work, response):
 	while True:
 		try:
 			item = work.get(block=True, timeout=5)
-		except Empty, e:
+		except Empty:
 			# No work is no cause for panic, dear.
 			continue
 
@@ -276,8 +275,8 @@ def message_worker(name, work, response):
 		logger.info("Sending AMQP message for host {0}".format(host))
 
 		if isinstance(message, list):
-			for m in message:
-				queue.publish("".join(m), { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+			for item in message:
+				queue.publish("".join(item), { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
 		else:
 			queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
 
@@ -294,7 +293,7 @@ def test_worker(name, work, response):
 	while (True):
 		try:
 			item = work.get(block=True, timeout=5)
-		except Empty, e:
+		except Empty:
 			# No work is no cause for panic, dear.
 			continue
 
@@ -306,16 +305,19 @@ def test_worker(name, work, response):
 	logger.debug("Exiting loop")
 
 def kill_handler(signum=None, frame=None):
+	""" Handle kill-type signals, by telling the dispatcher to stop all workers. """
 	global STOP
 	if type(signum) != type(None):
 		logging.getLogger(__name__).info("Caught signal {0}".format(signum))
 		STOP = True
 
 def config_handler(signum=None, frame=None):
+	""" Handle reload-type signals, by reloading the host configuration. """
 	global RELOADCONFIG
 	if type(signum) != type(None):
 		logging.getLogger(__name__).info("Caught signal {0}".format(signum))
 		RELOADCONFIG = True
 
 def hello(text):
+	""" Test method. """
 	get_logger(__name__).info(text)
