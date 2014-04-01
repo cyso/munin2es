@@ -236,7 +236,6 @@ def munin_worker(name, work, response):
 			# No work is no cause for panic, dear.
 			continue
 
-		logger.debug(item)
 		if item == "STOP":
 			break
 		host, config = item
