@@ -223,6 +223,8 @@ def dispatcher():
 	for i in range(1):
 		message_queue.put("STOP")
 
+	workers.stopAll()
+
 def munin_worker(name, work, response):
 	""" Work thread, handles connections to Munin and fetching of details. """
 	logger = get_logger("{0}.{1}.{2}".format(__name__, "munin_worker", name))
