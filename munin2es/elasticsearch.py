@@ -18,7 +18,7 @@
 #
 
 from __future__ import absolute_import
-import json, datetime
+import json, datetime, logging
 from dateutil.tz import tzlocal
 from elasticsearch import Elasticsearch
 
@@ -169,6 +169,8 @@ class BulkMessage(object):
 		self.encode = encode_message
 		self.message = message
 
+		self.logger = logging.getLogger(__name__)
+
 	def generate(self, as_objects=False):
 		"""
 		Generate a JSON formatted Bulk API message, using the stored data in this BulkMessage.
@@ -180,6 +182,8 @@ class BulkMessage(object):
 			a single string of information. Both entries are strings ending in a newline, and will form a
 			valid Elasticsearch Bulk API message when concatenated together.
 		"""
+
+		self.logger.debug("Generating {0} message".format(self.action))
 
 		metadata = "{0}".format(json.dumps(self.metadata))
 		if self.action == DELETE_ACTION:
@@ -194,6 +198,7 @@ class BulkMessage(object):
 		message_list = []
 
 		if isinstance(self.message, (list, tuple)):
+			self.logger.debug("Processing a list of messages of length {0}".format(len(self.message)))
 			if self.encode:
 				message_list = map(lambda x: json.dumps(x) + "\n", self.message)
 			else:

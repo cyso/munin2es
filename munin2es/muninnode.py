@@ -17,6 +17,7 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import json
 import socket
 import datetime
@@ -31,6 +32,7 @@ class MuninNodeClient(object):
 		self.file = self.connection.makefile()
 		self.hello = self._readline()
 		self.hostname = hostname
+		self.logger = logging.getLogger(__name__)
 
 	def _readline(self):
 		return self.file.readline().strip()
@@ -49,7 +51,9 @@ class MuninNodeClient(object):
 	def list(self):
 		""" List all available Munin Node modules. """
 		self.connection.sendall("list\n")
-		return self._readline().split(' ')
+		modules = self._readline().split(' ')
+		self.logger.debug("Node {0} supports modules: {1}".format(self.hostname, " ".join(modules)))
+		return modules
 
 	def fetch(self, key):
 		""" Fetch the counters for the given Munin Node module. """

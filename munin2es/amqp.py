@@ -17,6 +17,7 @@
 # along with munin2es. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import munin2es
 import pika
 from pika.exceptions import AMQPConnectionError, ChannelClosed
@@ -47,7 +48,9 @@ class Queue(object):
 		routing_key: string
 			what routing_key to use for published messages. If unset, this parameter must be set during publishing
 		"""
+		self.logger = logging.getLogger(__name__)
 
+		self.logger.debug("Creating connection to {0}:{1}".format(host[0], host[1]))
 		self.default_routing_key = routing_key
 		self.credentials = pika.PlainCredentials(credentials[0], credentials[1])
 		self.parameters = pika.ConnectionParameters(host=host[0], port=host[1], credentials=self.credentials)
@@ -56,11 +59,13 @@ class Queue(object):
 
 		self.exchange_name = exchange['exchange']
 		try:
+			self.logger.debug("Declaring exchange {0}".format(self.exchange_name))
 			self.channel.exchange_declare(**exchange)
 		except ChannelClosed, e:
 			raise Exception(str(e[1]))
 	
 	def close(self):
+		self.logger.debug("Closing AMQP connection")
 		self.connection.close()
 	
 	def publish(self, message, properties={}):
@@ -85,5 +90,7 @@ class Queue(object):
 
 		if not routing_key:
 			raise Exception("routing_key was not specified")
+
+		#self.logger.debug("Publishing message to exchange {0} with routing_key {1}".format(self.exchange_name, routing_key))
 
 		self.channel.basic_publish(self.exchange_name, routing_key, message, pika.BasicProperties(**properties))
