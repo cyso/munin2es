@@ -19,7 +19,7 @@
 
 from __future__ import absolute_import
 import logging, logging.handlers, os, sys, datetime, time
-from multiprocessing import Queue as PQueue, Process
+from multiprocessing import Process, Manager
 from Queue import Empty
 from chaos.arguments import get_config_argparse
 from chaos.config import get_config, get_config_dir
@@ -135,9 +135,10 @@ def dispatcher():
 	""" Main worker, responsible for mainting Queues and distributing work. """
 	global RELOADCONFIG, STOP
 
-	munin_queue = PQueue()
-	message_queue = PQueue()
-	done_queue = PQueue()
+	manager = Manager()
+	munin_queue = manager.Queue()
+	message_queue = manager.Queue()
+	done_queue = manager.Queue()
 	workers = Workers()
 
 	logger = get_logger(__name__ + ".dispatcher")
