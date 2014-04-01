@@ -24,7 +24,7 @@ setproctitle.setproctitle("munin2es")
 
 from argparse import ArgumentParser
 import munin2es
-from munin2es import process_munin_node
+from munin2es import process_munin_node, dispatcher
 from chaos.arguments import get_config_arguments
 from chaos.config import get_config_dir
 from chaos.logging import get_logger
@@ -69,8 +69,12 @@ if not (munin2es.VERBOSE and munin2es.DEBUG):
 if not config_arg.help:
 	logger.info("{0} version {1} ({2}) starting...".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
 
-hostconfig = get_config_dir(munin2es.HOSTDIR)
+## Register signal handlers
+signal.signal(signal.SIGINT, munin2es.kill_handler)
+signal.signal(signal.SIGTERM, munin2es.kill_handler)
+signal.signal(signal.SIGUSR1, munin2es.config_handler)
+signal.signal(signal.SIGHUP, munin2es.config_handler)
 
-for (host, config) in hostconfig.iteritems():
-	process_munin_node(host, config)
+dispatcher()
+
 logger.info("All done!")

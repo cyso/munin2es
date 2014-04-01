@@ -18,10 +18,13 @@
 #
 
 from __future__ import absolute_import
-import logging, logging.handlers, os, sys
+import logging, logging.handlers, os, sys, datetime, time
+from multiprocessing import Queue as PQueue, Process
+from Queue import Empty
 from chaos.arguments import get_config_argparse
 from chaos.config import get_config, get_config_dir
 from chaos.logging import get_logger
+from chaos.multiprocessing.workers import Workers
 from .muninnode import MuninNodeClient
 from .elasticsearch import BulkMessage, generate_index_name, DAILY
 from .amqp import Queue, NORMAL_MESSAGE, PERSISTENT_MESSAGE
@@ -36,6 +39,7 @@ VERBOSE = None
 
 HOSTDIR = None
 WORKERS = None
+INTERVAL = None
 
 AMQPHOST = None
 AMQPCREDENTIALS = None
@@ -43,9 +47,14 @@ AMQPEXCHANGE = None
 AMQPROUTINGKEY = None
 AMQPMESSAGEDURABLE = None
 
+QUEUELIMITFACTOR = 3
+RELOADCONFIG = False
+STOP = False
+
 def parse_cli_args(config):
 	arg_parser = get_config_argparse()
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
+	arg_parser.add_argument("--interval",		metavar="INT",		type=int,	default=config.get("interval", 5*60),				help="Minimum interval between Munin fetches.")
 	arg_parser.add_argument("--hostdir",		metavar="HDIR",		type=str,	default=config.get("hostdir", None),				help="Directory that contains host configuration files.")
 	arg_parser.add_argument("--workers",		metavar="W",		type=int,	default=config.get("workers", 10),					help="How many worker processes to spawn.")
 	arg_parser.add_argument("--amqphost",		metavar="AH",		type=str,	default=config.get("amqphost", None),				help="AMQP hostname.")
@@ -71,7 +80,7 @@ def parse_cli_args(config):
 
 def reload_config():
 	global STARTARG, QUIET, VERBOSE, DEBUG
-	global HOSTDIR, WORKERS
+	global HOSTDIR, WORKERS, INTERVAL
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
 	config = get_config(STARTARG)
@@ -83,6 +92,7 @@ def reload_config():
 
 	HOSTDIR = args.hostdir
 	WORKERS = args.workers
+	INTERVAL = args.interval
 
 	AMQPHOST = (args.amqphost, args.amqpport)
 	AMQPCREDENTIALS = (args.amqpuser, args.amqppass)
@@ -131,6 +141,143 @@ def process_munin_node(host, config):
 	index = generate_index_name("munin", DAILY)
 	bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
 	bulk_to_rabbitmq(message=bulk.generate(as_objects=True))
+
+def dispatcher():
+	""" Main worker, responsible for mainting Queues and distributing work. """
+	global RELOADCONFIG, STOP
+
+	munin_queue = PQueue()
+	message_queue = PQueue()
+	done_queue = PQueue()
+	workers = Workers()
+
+	logger = get_logger(__name__ + ".dispatcher")
+	logger.info("Dispatcher starting...")
+
+	#for i in range(WORKERS):
+	#	name = "munin-{0}".format(str(i))
+	#	p = Process(target=munin_worker, args=(name, munin_queue, done_queue))
+	#	workers.registerWorker(name, p)
+
+	#for i in range(1):
+	#	name = "message-{0}".format(str(i))
+	#	p = Process(target=message_worker, args=(name, message_queue, done_queue))
+	#	workers.registerWorker(name, p)
+
+	for i in range(WORKERS):
+		name = "test-{0}".format(str(i))
+		p = Process(name=name, target=test_worker, args=(name, munin_queue, done_queue))
+		workers.registerWorker(name, p)
+
+	RELOADCONFIG = True
+	timestamps = {}
+	workers.startAll()
+
+	logger.info("Starting main loop")
+	lastrun = datetime.datetime.now()
+
+	while (not STOP):
+		if RELOADCONFIG:
+			logger.info("Reloading host config")
+			hosts = get_config_dir(HOSTDIR)
+			RELOADCONFIG = False
+
+		now = datetime.datetime.now()
+		logger.debug("Checking timestamps against {0}".format(str(now)))
+
+		if munin_queue.qsize() < (len(hosts) * QUEUELIMITFACTOR):
+			for (host, config) in hosts.iteritems():
+				if not host in timestamps.keys():
+					timestamps[host] = (now, True)
+				elif (now - timestamps[host][0]).total_seconds() > INTERVAL and timestamps[host][1]:
+					munin_queue.put((host, config))
+					timestamps[host] = (now, False)
+					logger.debug("Queued munin work for {0}".format(host))
+				elif (now - timestamps[host][0]).total_seconds() > (INTERVAL * 1) and not timestamps[host][1]:
+					munin_queue.put((host, config))
+					timestamps[host] = (now, False)
+					logger.warning("No response received for host {0}, requeued".format(host))
+		else:
+			logger.warning("Munin worker queue is full, will not queue more work.")
+
+		while True:
+			try:
+				item = done_queue.get(block=False)
+			except Empty, e:
+				logger.debug("Done queue was empty.")
+				break
+
+			if item[0] == "error":
+				# Do error stuff
+				pass
+			elif item[0] == "munin":
+				message_queue.put(item[2])
+				logger.debug("Dispatched message for host {0}".format(item[1]))
+			elif item[0] == "message":
+				# Do stuff after successful message
+				pass
+			else:
+				logger.error("Received a done message with unknown type: {0}".format(item[0]))
+
+		if (lastrun - now).total_seconds() < 5:
+			time.sleep(5)
+		lastrun = datetime.datetime.now()
+
+	logger.info("Loop exited, cleaning up...")
+	## Empty queues and fill with STOP messages
+	try:
+		while not munin_queue.empty():
+			munin_queue.get(block=False)
+	except Empty, e:
+		# We're cleaning up, no need to handle this error
+		pass
+
+	try:
+		while not message_queue.empty():
+			message_queue.get(block=False)
+	except Empty, e:
+		# We're cleaning up, no need to handle this error
+		pass
+
+	logger.info("Passing STOP messages to workers")
+	for i in range(WORKERS):
+		munin_queue.put("STOP")
+	for i in range(1):
+		message_queue.put("STOP")
+
+def munin_worker(name, work, response):
+	""" Work thread, handles connections to Munin and fetching of details. """
+	pass
+
+def message_worker(name, work, response):
+	""" Message thread, handles sending Munin information to AMQP. """
+	pass
+
+def test_worker(name, work, response):
+	""" Testing thread. """
+	while (True):
+		try:
+			item = work.get(block=True, timeout=5)
+
+			get_logger(__name__ + ".test_worker." + name).debug(item)
+
+			if item == "STOP":
+				break
+		except Empty, e:
+			# No work is no cause for panic, dear.
+			pass
+
+def kill_handler(signum=None, frame=None):
+	global STOP
+	if type(signum) != type(None):
+		logging.getLogger(__name__).info("Caught signal {0}".format(signum))
+		STOP = True
+
+def config_handler(signum=None, frame=None):
+	global RELOADCONFIG
+	if type(signum) != type(None):
+		logging.getLogger(__name__).info("Caught signal {0}".format(signum))
+		RELOADCONFIG = True
 
 def hello(text):
 	get_logger(__name__).info(text)
