@@ -18,7 +18,7 @@
 #
 
 from __future__ import absolute_import
-import logging, logging.handlers, os, sys, datetime, time
+import logging, logging.handlers, os, sys, datetime, time, setproctitle
 from multiprocessing import Process, Manager
 from Queue import Empty
 from chaos.arguments import get_config_argparse
@@ -226,6 +226,7 @@ def dispatcher():
 def munin_worker(name, work, response):
 	""" Work thread, handles connections to Munin and fetching of details. """
 	logger = get_logger("{0}.{1}.{2}".format(__name__, "munin_worker", name))
+	setproctitle.setproctitle("munin2es " + name)
 	while True:
 		try:
 			item = work.get(block=True, timeout=5)
@@ -256,6 +257,7 @@ def munin_worker(name, work, response):
 def message_worker(name, work, response):
 	""" Message thread, handles sending Munin information to AMQP. """
 	logger = get_logger("{0}.{1}.{2}".format(__name__, "message_worker", name))
+	setproctitle.setproctitle("munin2es " + name)
 	logger.info("Opening AMQP connection to {0}".format(AMQPHOST))
 	queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
 
@@ -287,6 +289,7 @@ def message_worker(name, work, response):
 def test_worker(name, work, response):
 	""" Testing thread. """
 	logger = get_logger("{0}.{1}.{2}".format(__name__, "test_worker", name))
+	setproctitle.setproctitle("munin2es " + name)
 	while (True):
 		try:
 			item = work.get(block=True, timeout=5)
