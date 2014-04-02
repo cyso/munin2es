@@ -40,11 +40,15 @@ class MuninNodeClient(object):
 
 	def __init__(self, hostname, port=4949, address=None):
 		""" Connect to the given host and port. """
-		self.connection = socket.create_connection((hostname if not address else address, port))
+		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=5)
+		self.connection.settimeout(None)
 		self.file = self.connection.makefile()
 		self.hello = self._readline()
 		self.hostname = hostname
 		self.logger = logging.getLogger(__name__)
+
+		if not self.hello:
+			raise IOError(0, "No hello received")
 
 	def _readline(self):
 		""" Reads one line from the internal connection. """

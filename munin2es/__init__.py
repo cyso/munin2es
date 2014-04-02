@@ -117,6 +117,9 @@ def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 	client = MuninNodeClient(node, port, address)
 	messages = client.get_all_messages(preformat=True)
 
+	if not messages:
+		return None
+
 	if index is None:
 		index = generate_index_name("munin", DAILY)
 	bulk = BulkMessage(index=index, message=messages, encode_message=False, datatype="munin")
@@ -185,8 +188,7 @@ def dispatcher():
 				break
 
 			if item[0] == "error":
-				# Do error stuff
-				pass
+				logger.error("Received error for host {0}: {1}".format(item[1], item[2]))
 			elif item[0] == "munin":
 				message_queue.put((item[1], item[2]))
 				logger.debug("Dispatched message for host {0}".format(item[1]))
@@ -249,9 +251,16 @@ def munin_worker(name, work, response):
 
 		logger.debug("- Using address: {0}, port: {1}".format(address, port))
 		index = generate_index_name("munin", DAILY)
-		bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
+		try:
+			bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
+		except IOError, ioe:
+			response.put(("error", host, ioe.strerror))
+			return
 
-		response.put(("munin", host, bulk.generate(as_objects=True)))
+		if not bulk:
+			response.put(("error", host, "No response from Munin node."))
+		else:
+			response.put(("munin", host, bulk.generate(as_objects=True)))
 	logger.debug("Exiting loop")
 
 def message_worker(name, work, response):
