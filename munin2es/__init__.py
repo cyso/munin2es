@@ -232,7 +232,7 @@ def munin_worker(name, work, response):
 	setproctitle.setproctitle("munin2es " + name)
 	while True:
 		try:
-			item = work.get(block=True, timeout=5)
+			item = work.get(block=True, timeout=1)
 		except Empty:
 			# No work is no cause for panic, dear.
 			continue
@@ -272,7 +272,7 @@ def message_worker(name, work, response):
 
 	while True:
 		try:
-			item = work.get(block=True, timeout=5)
+			item = work.get(block=True, timeout=1)
 		except Empty:
 			# No work is no cause for panic, dear.
 			continue
@@ -301,7 +301,7 @@ def test_worker(name, work, response):
 	setproctitle.setproctitle("munin2es " + name)
 	while (True):
 		try:
-			item = work.get(block=True, timeout=5)
+			item = work.get(block=True, timeout=1)
 		except Empty:
 			# No work is no cause for panic, dear.
 			continue
