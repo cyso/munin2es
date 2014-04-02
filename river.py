@@ -21,12 +21,12 @@
 """ Helper tool for munin2es to handle Elasticsearch River configurations. """
 
 import sys, signal, time, setproctitle
+import munin2es
 
-setproctitle.setproctitle("munin2es-river")
+setproctitle.setproctitle(munin2es.NAME + "-river")
 
 import logging
 from argparse import ArgumentParser
-import munin2es
 from munin2es.elasticsearch import create_river_config, delete_river_config
 from chaos.arguments import get_config_arguments, get_config_argparse
 from chaos.logging import get_logger

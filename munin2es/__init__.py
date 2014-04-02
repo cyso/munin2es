@@ -60,6 +60,7 @@ STOP = False
 def parse_cli_args(config):
 	""" Builds an ArgumentParser to parse incoming CLI arguments. Also performs some validation. """
 	arg_parser = get_config_argparse()
+	arg_parser.prog = NAME
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
 	arg_parser.add_argument("--daemonize",		action="store_true",			default=config.get("daemonize", False),				help="Daemonize the program.")
 	arg_parser.add_argument("--uid",			metavar="UID",		type=int,	default=config.get("uid", None),					help="User to switch to after daemonizing.")

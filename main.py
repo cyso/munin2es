@@ -21,10 +21,10 @@
 """ Main executable for munin2es. """
 
 import sys, signal, setproctitle, logging, daemon
-
-setproctitle.setproctitle("munin2es")
-
 import munin2es
+
+setproctitle.setproctitle(munin2es.NAME)
+
 from lockfile import LockError, LockFailed
 from munin2es import dispatcher
 from chaos.arguments import get_config_arguments
