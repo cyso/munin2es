@@ -34,7 +34,15 @@ from chaos.logging import get_logger
 ## Initialize root logger with default handlers
 get_logger(None, level=logging.INFO, handlers={"syslog": None, "console": None})
 
+version_parser = get_config_argparse(suppress=["config", "help"])
+version_args = version_parser.parse_known_args()[0]
+
+if version_args.version:
+	print "{0}-river version {1} ({2})".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD)
+	sys.exit(0)
+
 arg_parser = get_config_argparse(suppress=["config"])
+arg_parser.prog = munin2es.NAME + "-river"
 arg_parser.description = "{0} is a small tool to edit river configuration in Elasticsearch.".format(munin2es.NAME + "-river")
 arg_parser.add_argument("--settings",	metavar="S", required=False, type=str, default=None, help="File with JSON formatted River configuration.")
 arg_parser.add_argument("--river", 		metavar="R", required=True,  type=str, default=None, help="Name of the River plugin to configure.")
@@ -68,10 +76,6 @@ if not args.verbose:
 
 ## Get the actual logger we will use
 logger = get_logger(munin2es.NAME + "-river")
-
-if args.version:
-	logger.info("{0}-river version {1} ({2})".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
-	sys.exit(0)
 
 logger.info("{0}-river version {1} ({2}) starting...".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
 
