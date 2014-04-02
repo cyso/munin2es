@@ -229,8 +229,8 @@ def dispatcher():
 def munin_worker(name, work, response):
 	""" Work thread, handles connections to Munin and fetching of details. """
 	logger = get_logger("{0}.{1}.{2}".format(__name__, "munin_worker", name))
-	setproctitle.setproctitle("munin2es " + name)
 	while True:
+		setproctitle.setproctitle("munin2es {0}".format(name))
 		try:
 			item = work.get(block=True, timeout=1)
 		except Empty:
@@ -241,6 +241,7 @@ def munin_worker(name, work, response):
 			break
 		host, config = item
 
+		setproctitle.setproctitle("munin2es {0} {1}".format(name, host))
 		logger.info("Fetching Munin info from {0}".format(host))
 		address = host
 		port = 4949
