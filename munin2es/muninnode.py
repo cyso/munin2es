@@ -38,9 +38,9 @@ def mangle_config(config):
 class MuninNodeClient(object):
 	""" Connects to Munin Node, and provides easy access to its data. """
 
-	def __init__(self, hostname, port=4949, address=None):
+	def __init__(self, hostname, port=4949, address=None, timeout=5):
 		""" Connect to the given host and port. """
-		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=5)
+		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=timeout)
 		self.connection.settimeout(None)
 		self.file = self.connection.makefile()
 		self.hello = self._readline()

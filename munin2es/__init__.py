@@ -41,6 +41,8 @@ DEBUG = None
 HOSTDIR = None
 WORKERS = None
 INTERVAL = None
+TIMEOUT = None
+REQUEUETIMEOUT = None
 
 AMQPHOST = None
 AMQPCREDENTIALS = None
@@ -57,6 +59,8 @@ def parse_cli_args(config):
 	arg_parser = get_config_argparse()
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
 	arg_parser.add_argument("--interval",		metavar="INT",		type=int,	default=config.get("interval", 5*60),				help="Minimum interval between Munin fetches.")
+	arg_parser.add_argument("--timeout",		metavar="TIM",		type=int,	default=config.get("timeout", 5),					help="Connection timeout in seconds.")
+	arg_parser.add_argument("--requeuetimeout",		metavar="RTIM",	type=int,	default=config.get("requeuetimeout", 6*60),			help="Requeue timeout in seconds.")
 	arg_parser.add_argument("--hostdir",		metavar="HDIR",		type=str,	default=config.get("hostdir", None),				help="Directory that contains host configuration files.")
 	arg_parser.add_argument("--workers",		metavar="W",		type=int,	default=config.get("workers", 10),					help="How many worker processes to spawn.")
 	arg_parser.add_argument("--amqphost",		metavar="AH",		type=str,	default=config.get("amqphost", None),				help="AMQP hostname.")
@@ -83,7 +87,7 @@ def parse_cli_args(config):
 def reload_config():
 	""" (Re-)read config and cli arguments, and set them internally. """
 	global QUIET, VERBOSE, DEBUG
-	global HOSTDIR, WORKERS, INTERVAL
+	global HOSTDIR, WORKERS, INTERVAL, TIMEOUT, REQUEUETIMEOUT
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
 	config = get_config(STARTARG)
@@ -96,6 +100,8 @@ def reload_config():
 	HOSTDIR = args.hostdir
 	WORKERS = args.workers
 	INTERVAL = args.interval
+	TIMEOUT = args.timeout
+	REQUEUETIMEOUT = args.requeuetimeout
 
 	AMQPHOST = (args.amqphost, args.amqpport)
 	AMQPCREDENTIALS = (args.amqpuser, args.amqppass)
@@ -114,7 +120,7 @@ def reload_config():
 
 def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 	""" Convenience methode to call MuninNodeClient and process its output into a BulkMessage. """
-	client = MuninNodeClient(node, port, address)
+	client = MuninNodeClient(node, port, address, TIMEOUT)
 	messages = client.get_all_messages(preformat=True)
 
 	if not messages:
@@ -169,11 +175,15 @@ def dispatcher():
 			for (host, config) in hosts.iteritems():
 				if not host in timestamps.keys():
 					timestamps[host] = (datetime.datetime.min, True)
-				elif (now - timestamps[host][0]).total_seconds() > INTERVAL and timestamps[host][1]:
+					continue
+
+				lastsecs = (now - timestamps[host][0]).total_seconds()
+				lastsuccess = timestamps[host][1]
+				if lastsecs > INTERVAL and lastsuccess:
 					munin_queue.put((host, config))
 					timestamps[host] = (now, False)
 					logger.debug("Queued munin work for {0}".format(host))
-				elif (now - timestamps[host][0]).total_seconds() > (INTERVAL * 4) and not timestamps[host][1]:
+				elif lastsecs > REQUEUETIMEOUT and not lastsuccess:
 					munin_queue.put((host, config))
 					timestamps[host] = (now, False)
 					logger.warning("No response received for host {0}, requeued".format(host))
