@@ -255,7 +255,7 @@ def munin_worker(name, work, response):
 			bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
 		except IOError, ioe:
 			response.put(("error", host, ioe.strerror))
-			return
+			continue
 
 		if not bulk:
 			response.put(("error", host, "No response from Munin node."))
