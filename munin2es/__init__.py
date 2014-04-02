@@ -198,8 +198,8 @@ def dispatcher():
 			else:
 				logger.error("Received a done message with unknown type: {0}".format(item[0]))
 
-		if (lastrun - now).total_seconds() < 5:
-			time.sleep(5)
+		if (lastrun - now).total_seconds() < 1:
+			time.sleep(1)
 		lastrun = datetime.datetime.now()
 
 	logger.info("Loop exited, cleaning up...")
