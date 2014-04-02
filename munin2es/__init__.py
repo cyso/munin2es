@@ -168,7 +168,7 @@ def dispatcher():
 		if munin_queue.qsize() < (len(hosts) * QUEUELIMITFACTOR):
 			for (host, config) in hosts.iteritems():
 				if not host in timestamps.keys():
-					timestamps[host] = (now, True)
+					timestamps[host] = (datetime.datetime.min, True)
 				elif (now - timestamps[host][0]).total_seconds() > INTERVAL and timestamps[host][1]:
 					munin_queue.put((host, config))
 					timestamps[host] = (now, False)
