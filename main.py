@@ -20,7 +20,7 @@
 
 """ Main executable for munin2es. """
 
-import os, sys, signal, setproctitle, logging, daemon
+import sys, signal, setproctitle, logging, daemon
 
 setproctitle.setproctitle("munin2es")
 
@@ -31,48 +31,58 @@ from chaos.arguments import get_config_arguments
 from chaos.logging import get_logger
 from daemon.pidlockfile import TimeoutPIDLockFile
 
-## Initialize root logger with default handlers
-get_logger(None, level=logging.INFO, handlers={"syslog": None, "console": None})
+def get_log_handlers(config):
+	""" Create a log handlers map based on the passed configuration. """
+	log_handlers = {}
+	if not config.version and not config.help:
+		log_handlers['syslog'] = None
+	loglevel = logging.INFO
+	if config.verbose:
+		loglevel = logging.DEBUG
+	if not config.quiet:
+		log_handlers['console'] = None
 
-(config_arg, config_unknown) = get_config_arguments()
+	return (loglevel, log_handlers)
 
-## Set log handling based on initial configuration
-log_handlers = {}
-if not config_arg.version and not config_arg.help:
-	log_handlers['syslog'] = None
-loglevel = logging.INFO
-if config_arg.verbose:
-	loglevel = logging.DEBUG
-if not config_arg.quiet:
-	log_handlers['console'] = None
+def initialize(name, version, build):
+	""" Setup the environment. """
+	## Initialize root logger with default handlers
+	get_logger(None, level=logging.INFO, handlers={"syslog": None, "console": None})
 
-## Reset the root logger with the new values
-## All other loggers will propagate their events to the root logger, and use
-## its handlers and settings.
-get_logger(None, level=loglevel, handlers=log_handlers)
+	config_arg = get_config_arguments()[0]
 
-## Get the actual logger we will use
-logger = get_logger(munin2es.NAME)
+	loglevel, log_handlers = get_log_handlers(config_arg)
 
-if config_arg.version:
-	logger.info("{0} version {1} ({2})".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
-	sys.exit(0)
+	## Reset the root logger with the new values
+	## All other loggers will propagate their events to the root logger, and use
+	## its handlers and settings.
+	get_logger(None, level=loglevel, handlers=log_handlers)
 
-munin2es.STARTARG = config_arg
-munin2es.reload_config()
+	## Get the actual logger we will use
+	logger = get_logger(name)
 
-## The backend loggers for urllib, elasticsearch and pika are really chatty, let's limit them unless --verbose and --debug are both set
-if not (munin2es.VERBOSE and munin2es.DEBUG):
-	get_logger("urllib3.connectionpool", level=logging.ERROR)
-	get_logger("elasticsearch", level=logging.ERROR)
-	get_logger("pika.adapters.base_connection", level=logging.ERROR)
-	get_logger("pika", level=logging.WARNING)
+	if config_arg.version:
+		logger.info("{0} version {1} ({2})".format(name, version, build))
+		sys.exit(0)
 
-if not config_arg.help:
-	logger.info("{0} version {1} ({2}) starting...".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
+	munin2es.STARTARG = config_arg
+	munin2es.reload_config()
+
+	## The backend loggers for urllib, elasticsearch and pika are really chatty, let's limit them unless --verbose and --debug are both set
+	if not (munin2es.VERBOSE and munin2es.DEBUG):
+		get_logger("urllib3.connectionpool", level=logging.ERROR)
+		get_logger("elasticsearch", level=logging.ERROR)
+		get_logger("pika.adapters.base_connection", level=logging.ERROR)
+		get_logger("pika", level=logging.WARNING)
+
+	if not config_arg.help:
+		logger.info("{0} version {1} ({2}) starting...".format(name, version, build))
 
 
 def main():
+	""" Main entrypoint after environment has been initialized. """
+	logger = get_logger(munin2es.NAME)
+
 	if munin2es.DAEMONIZE:
 		logger.info("Daemonizing...")
 
@@ -88,6 +98,8 @@ def main():
 			signal.SIGHUP: munin2es.config_handler
 		}
 
+		loglevel, log_handlers = get_log_handlers(munin2es.STARTARG)
+
 		if "console" in log_handlers.keys():
 			logger.info("Disabling output to console")
 			del(log_handlers["console"])
@@ -97,9 +109,9 @@ def main():
 			with context:
 				dispatcher()
 		except LockFailed, lfe:
-			logger.fatal("Failed to create PID file!" + str(e))
+			logger.fatal("Failed to create PID file!" + str(lfe))
 		except LockError, lee:
-			logger.fatal("Failed to acquire lock for PID file!" + str(e))
+			logger.fatal("Failed to acquire lock for PID file!" + str(lee))
 
 	else:
 		## Register signal handlers
@@ -112,4 +124,5 @@ def main():
 	logger.info("All done!")
 
 if __name__ == "__main__":
+	initialize(name=munin2es.NAME, version=munin2es.VERSION, build=munin2es.BUILD)
 	main()
