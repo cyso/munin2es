@@ -38,6 +38,11 @@ QUIET = None
 VERBOSE = None
 DEBUG = None
 
+DAEMONIZE = None
+UID = None
+GID = None
+PIDFILE = None
+
 HOSTDIR = None
 WORKERS = None
 INTERVAL = None
@@ -58,6 +63,10 @@ def parse_cli_args(config):
 	""" Builds an ArgumentParser to parse incoming CLI arguments. Also performs some validation. """
 	arg_parser = get_config_argparse()
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
+	arg_parser.add_argument("--daemonize",		action="store_true",			default=config.get("daemonize", False),				help="Daemonize the program.")
+	arg_parser.add_argument("--uid",			metavar="UID",		type=int,	default=config.get("uid", None),					help="User to switch to after daemonizing.")
+	arg_parser.add_argument("--gid",			metavar="GID",		type=int,	default=config.get("gid", None),					help="Group to switch to after daemonizing.")
+	arg_parser.add_argument("--pidfile",		metavar="PID",		type=str,	default=config.get("pidfile", None),				help="Where to create a PID file after daemonizing.")
 	arg_parser.add_argument("--interval",		metavar="INT",		type=int,	default=config.get("interval", 5*60),				help="Minimum interval between Munin fetches.")
 	arg_parser.add_argument("--timeout",		metavar="TIM",		type=int,	default=config.get("timeout", 5),					help="Connection timeout in seconds.")
 	arg_parser.add_argument("--requeuetimeout",		metavar="RTIM",	type=int,	default=config.get("requeuetimeout", 6*60),			help="Requeue timeout in seconds.")
@@ -87,6 +96,7 @@ def parse_cli_args(config):
 def reload_config():
 	""" (Re-)read config and cli arguments, and set them internally. """
 	global QUIET, VERBOSE, DEBUG
+	global DAEMONIZE, UID, GID, PIDFILE
 	global HOSTDIR, WORKERS, INTERVAL, TIMEOUT, REQUEUETIMEOUT
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
@@ -96,6 +106,11 @@ def reload_config():
 	QUIET = args.quiet
 	VERBOSE = args.verbose
 	DEBUG = args.debug
+
+	DAEMONIZE = args.daemonize
+	UID = args.uid
+	GID = args.gid
+	PIDFILE = args.pidfile
 
 	HOSTDIR = args.hostdir
 	WORKERS = args.workers
@@ -167,6 +182,10 @@ def dispatcher():
 			logger.info("Reloading host config")
 			hosts = get_config_dir(HOSTDIR)
 			RELOADCONFIG = False
+
+		if len(hosts) == 0:
+			logger.fatal("List of hosts is empty, exiting main loop")
+			break
 
 		now = datetime.datetime.now()
 

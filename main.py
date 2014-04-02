@@ -20,14 +20,16 @@
 
 """ Main executable for munin2es. """
 
-import sys, signal, setproctitle, logging
+import os, sys, signal, setproctitle, logging, daemon
 
 setproctitle.setproctitle("munin2es")
 
 import munin2es
+from lockfile import LockError, LockFailed
 from munin2es import dispatcher
 from chaos.arguments import get_config_arguments
 from chaos.logging import get_logger
+from daemon.pidlockfile import TimeoutPIDLockFile
 
 ## Initialize root logger with default handlers
 get_logger(None, level=logging.INFO, handlers={"syslog": None, "console": None})
@@ -69,12 +71,45 @@ if not (munin2es.VERBOSE and munin2es.DEBUG):
 if not config_arg.help:
 	logger.info("{0} version {1} ({2}) starting...".format(munin2es.NAME, munin2es.VERSION, munin2es.BUILD))
 
-## Register signal handlers
-signal.signal(signal.SIGINT, munin2es.kill_handler)
-signal.signal(signal.SIGTERM, munin2es.kill_handler)
-signal.signal(signal.SIGUSR1, munin2es.config_handler)
-signal.signal(signal.SIGHUP, munin2es.config_handler)
 
-dispatcher()
+def main():
+	if munin2es.DAEMONIZE:
+		logger.info("Daemonizing...")
 
-logger.info("All done!")
+		pidfile = None
+		if munin2es.PIDFILE:
+			pidfile = TimeoutPIDLockFile(munin2es.PIDFILE, acquire_timeout=5)
+
+		context = daemon.DaemonContext(uid=munin2es.UID, gid=munin2es.GID, pidfile=pidfile)
+		context.signal_map = {
+			signal.SIGINT: munin2es.kill_handler,
+			signal.SIGTERM: munin2es.kill_handler,
+			signal.SIGUSR1: munin2es.config_handler,
+			signal.SIGHUP: munin2es.config_handler
+		}
+
+		if "console" in log_handlers.keys():
+			logger.info("Disabling output to console")
+			del(log_handlers["console"])
+			get_logger(None, level=loglevel, handlers=log_handlers)
+
+		try:
+			with context:
+				dispatcher()
+		except LockFailed, lfe:
+			logger.fatal("Failed to create PID file!" + str(e))
+		except LockError, lee:
+			logger.fatal("Failed to acquire lock for PID file!" + str(e))
+
+	else:
+		## Register signal handlers
+		signal.signal(signal.SIGINT, munin2es.kill_handler)
+		signal.signal(signal.SIGTERM, munin2es.kill_handler)
+		signal.signal(signal.SIGUSR1, munin2es.config_handler)
+		signal.signal(signal.SIGHUP, munin2es.config_handler)
+
+		dispatcher()
+	logger.info("All done!")
+
+if __name__ == "__main__":
+	main()
