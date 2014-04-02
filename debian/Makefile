@@ -12,13 +12,17 @@ changelog:
 release:
 	git dch --ignore-branch --release --auto -N $(VERSION) --git-author
 
-package: clean generate_control
+package: clean generate_control generate_man
 	dpkg-buildpackage -A -us -uc
 
 generate_control:
 	cat debian/control.source debian/control.precise > debian/control
 
-source: clean generate_control
+generate_man:
+	help2man --version-option="--version" --no-discard-stderr -N ./main.py > debian/munin2es.1 && echo "debian/munin2es.1" >> debian/munin2es.manpages
+	help2man --version-option="--version" --no-discard-stderr -N ./river.py > debian/munin2es-river.1 && echo "debian/munin2es-river.1" >> debian/munin2es.manpages
+
+source: clean generate_control generate_man
 	dpkg-buildpackage -S -k$(KEY)
 
 source_no_sign: clean generate_control
