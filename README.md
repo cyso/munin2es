@@ -7,10 +7,12 @@ Dependencies
 ============
 
 * python >= 2.7
+* [python-chaos]
 * python-configobj
+* python-daemon
+* python-dateutil
 * [python-elasticsearch]
 * python-pika
-* python-dateutil
 
 Building
 ========
@@ -48,4 +50,5 @@ Man page
 ```
 ```
 
+[python-chaos]: https://github.com/LordGaav/python-chaos
 [python-elasticsearch]: https://github.com/LordGaav/python-elasticsearch
