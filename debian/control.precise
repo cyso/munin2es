@@ -1,0 +1,5 @@
+Package: munin2es
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}, python-chaos (>= 0.1), python-configobj, python-daemon, python-dateutil, python-elasticsearch, python-pika
+Description: An interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.
+

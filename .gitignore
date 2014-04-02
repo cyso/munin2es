@@ -13,7 +13,7 @@
 
 ## Debian build files
 /debian/control
-/debian/imagecat.*
+/debian/munin2es.*
 /debian/files
 /debian/tmp
 /debian/*.log
