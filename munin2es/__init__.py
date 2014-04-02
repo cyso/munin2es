@@ -169,7 +169,6 @@ def dispatcher():
 			RELOADCONFIG = False
 
 		now = datetime.datetime.now()
-		logger.debug("Checking timestamps against {0}".format(str(now)))
 
 		if munin_queue.qsize() < (len(hosts) * QUEUELIMITFACTOR):
 			for (host, config) in hosts.iteritems():
@@ -194,7 +193,6 @@ def dispatcher():
 			try:
 				item = done_queue.get(block=False)
 			except Empty:
-				logger.debug("Message queue was empty.")
 				break
 
 			if item[0] == "error":
