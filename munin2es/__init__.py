@@ -29,9 +29,7 @@ from .muninnode import MuninNodeClient
 from .elasticsearch import BulkMessage, generate_index_name, DAILY
 from .amqp import Queue, NORMAL_MESSAGE, PERSISTENT_MESSAGE
 
-NAME = "munin2es"
-VERSION = "0.1"
-BUILD = "AAAAA"
+from .version import NAME, VERSION, BUILD
 
 STARTARG = None
 QUIET = None
