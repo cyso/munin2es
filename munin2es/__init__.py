@@ -28,6 +28,7 @@ from chaos.multiprocessing.workers import Workers
 from .muninnode import MuninNodeClient
 from .elasticsearch import BulkMessage, generate_index_name, DAILY
 from .amqp import Queue, NORMAL_MESSAGE, PERSISTENT_MESSAGE
+from pika.exceptions import ChannelClosed, AMQPError
 from configobj import ConfigObj
 
 from .version import NAME, VERSION, BUILD
@@ -356,32 +357,89 @@ def message_worker(name, work, response):
 	""" Message thread, handles sending Munin information to AMQP. """
 	logger = get_logger("{0}.{1}.{2}".format(__name__, "message_worker", name))
 	setproctitle.setproctitle("munin2es " + name)
-	logger.info("Opening AMQP connection to {0}".format(AMQPHOST))
-	queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
 
-	while True:
+	queue = None
+	initial = True
+	stop = False
+	tries = 5
+
+	message_metadata = {
+		"content_type": "text/plain",
+		"delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE
+	}
+
+	while not stop:
+		## First nested while is for trying to reconnect to AMQP
 		try:
-			item = work.get(block=True, timeout=1)
-		except Empty:
-			# No work is no cause for panic, dear.
+			logger.info("Opening AMQP connection to {0}".format(AMQPHOST))
+			queue = Queue(AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY)
+		except RuntimeError, rte:
+			logger.fatal("Received RuntimeError from backend, cannot continue! " + str(rte))
+			response.put(("error", None, "FATAL"))
+			stop = True
+			continue
+		except AMQPError, amqpe:
+			if initial or tries == 0:
+				logger.fatal("Failed to connect AMQP, cannot continue! " + str(amqpe))
+				response.put(("error", None, "FATAL"))
+				stop = True
+				continue
+			else:
+				logger.error("Failed to connect to AMQP, retrying {0} times with 30 second delays. {1}".format(tries, str(amqpe)))
+				tries = tries - 1
+				time.sleep(30)
+				continue
+		except Exception, eee:
+			logger.fatal("Received an unspecific error from AMQP, cannot continue! " + str(eee))
+			response.put(("error", None, "FATAL"))
+			stop = True
 			continue
 
-		if item == "STOP":
-			break
-		host, message = item
+		## If we reached here, we have had at least on successful connection and have (re)connected
+		## Reset counters
+		initial = False
+		tries = 5
 
-		logger.info("Sending AMQP message for host {0}".format(host))
+		while not stop:
+			## Second nested loop is the main work loop
+			## We only break out if we encounter an Exception
+			try:
+				item = work.get(block=True, timeout=1)
+			except Empty:
+				# No work is no cause for panic, dear.
+				continue
 
-		if isinstance(message, list):
-			for item in message:
-				queue.publish("".join(item), { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
-		else:
-			queue.publish(message, { "content_type": "text/plain", "delivery_mode": PERSISTENT_MESSAGE if AMQPMESSAGEDURABLE else NORMAL_MESSAGE })
+			if item == "STOP":
+				stop = True
+				continue
+			host, message = item
 
-		response.put(("message", host))
+			logger.info("Sending AMQP message for host {0}".format(host))
+
+			try:
+				if isinstance(message, list):
+					for item in message:
+						queue.publish("".join(item), message_metadata)
+				else:
+					queue.publish(message, message_metadata)
+			except Exception, eee:
+				## Pika specs are unclear what Exceptions to expect here
+				logger.error("Received an exception from AMQP, closing connection and reconnecting. " + str(eee))
+				response.put(("error", host, "AMQP exception on publish"))
+
+				try:
+					queue.close(reply_text="Disconnecting on AMQP exception")
+					queue = None
+				except ChannelClosed, cce:
+					## Already closed, do nothing
+					pass
+				break
+
+			response.put(("message", host))
 
 	logger.info("Closing AMQP connection")
-	queue.close()
+	if queue:
+		queue.close()
 	logger.debug("Done")
 
 def test_worker(name, work, response):
