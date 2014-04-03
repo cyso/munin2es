@@ -1,0 +1,16 @@
+{
+	"type": "rabbitmq",
+	"rabbitmq": {
+		"host": "hostname",
+		"port": 5672,
+		"user": "user",
+		"pass": "password",
+		"vhost": "/",
+		"queue": "munin2es",
+		"exchange": "munin2es",
+		"routing_key": "munin2es"
+	},
+	"index": {
+		"ordered": true
+	}
+}
