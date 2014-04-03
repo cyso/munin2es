@@ -33,5 +33,11 @@ setup(
 	author="Nick Douma",
 	author_email="n.douma@nekoconeko.nl",
 	url="https://github.com/Cysource/munin2es",
-	packages=[".", "munin2es"]
+	packages=["munin2es"],
+	scripts=["main.py", "river.py"],
+	data_files=[
+		("/etc", ["doc/munin2es.config"]),
+		("/etc/init.d", ["doc/{0}".format(NAME)]),
+		("/usr/share/doc/{0}".format(NAME), ["doc/river_example.json"])
+	]
 )
