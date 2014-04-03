@@ -109,9 +109,9 @@ def main():
 			with context:
 				dispatcher()
 		except LockFailed, lfe:
-			logger.fatal("Failed to create PID file!" + str(lfe))
+			logger.fatal("Failed to create PID file! " + str(lfe))
 		except LockError, lee:
-			logger.fatal("Failed to acquire lock for PID file!" + str(lee))
+			logger.fatal("Failed to acquire lock for PID file! " + str(lee))
 
 	else:
 		## Register signal handlers
