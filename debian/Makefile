@@ -6,6 +6,7 @@ clean:
 	rm -vfR debian/control
 	rm -vfR debian/munin2es*
 	rm -vf doc/munin2es
+	rm -vf doc/munin2es.*
 
 changelog:
 	git dch --ignore-branch --snapshot --auto --git-author
