@@ -57,11 +57,16 @@ QUEUELIMITFACTOR = 3
 RELOADCONFIG = False
 STOP = False
 
-def parse_cli_args(config):
-	""" Builds an ArgumentParser to parse incoming CLI arguments. Also performs some validation. """
-	arg_parser = get_config_argparse()
+def get_cli_args_parser(config, suppress=None):
+	""" Builds an ArgumentParser to parse incoming CLI arguments. """
+
+	if not suppress:
+		suppress = []
+
+	arg_parser = get_config_argparse(suppress=suppress)
 	arg_parser.prog = NAME
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
+	arg_parser.add_argument("--debug",			action="store_true",			default=config.get("debug", False),					help="When used with verbose, also debug backend library logging messages.")
 	arg_parser.add_argument("--daemonize",		action="store_true",			default=config.get("daemonize", False),				help="Daemonize the program.")
 	arg_parser.add_argument("--uid",			metavar="UID",		type=str,	default=config.get("uid", None),					help="User to switch to after daemonizing.")
 	arg_parser.add_argument("--gid",			metavar="GID",		type=str,	default=config.get("gid", None),					help="Group to switch to after daemonizing.")
@@ -73,20 +78,24 @@ def parse_cli_args(config):
 	arg_parser.add_argument("--workers",		metavar="W",		type=int,	default=config.get("workers", 10),					help="How many worker processes to spawn.")
 	arg_parser.add_argument("--amqphost",		metavar="AH",		type=str,	default=config.get("amqphost", None),				help="AMQP hostname.")
 	arg_parser.add_argument("--amqpport",		metavar="AP",		type=int,	default=config.get("amqpport", 5672),				help="AMQP port.")
-	arg_parser.add_argument("--amqpuser",		metavar="AU",		type=str,	default=config.get("amqpuser", None),				help="AMQP username.")
-	arg_parser.add_argument("--amqppass",		metavar="APW",		type=str,	default=config.get("amqppass", None),				help="AMQP password. Note that this might be visible in ps output!")
+	arg_parser.add_argument("--amqpuser",		metavar="AU",		type=str,	default=config.get("amqpuser", ""),					help="AMQP username.")
+	arg_parser.add_argument("--amqppass",		metavar="APW",		type=str,	default=config.get("amqppass", ""),					help="AMQP password.")
 	arg_parser.add_argument("--amqpvhost",		metavar="AV",		type=str,	default=config.get("amqpvhost", "/"),				help="AMQP vhost.")
 	arg_parser.add_argument("--amqpexchange",	metavar="AE",		type=str,	default=config.get("amqpexchange", "munin2es"),		help="AMQP exchange.")
 	arg_parser.add_argument("--amqproutingkey",	metavar="ARK",		type=str,	default=config.get("amqproutingkey", "munin2es"),	help="AMQP routing key.")
-	arg_parser.add_argument("--amqppassive",	action="store_true",			default=config.get("amqppassive", False),			help="AMQP exchange creation passivity.")
-	arg_parser.add_argument("--amqpexchangedurable",	action="store_true",		default=config.get("amqpexchangedurable", False),		help="AMQP exchange durability.")
+	arg_parser.add_argument("--amqppassive",	action="store_true",			default=config.get("amqppassive", True),			help="AMQP exchange creation passivity.")
+	arg_parser.add_argument("--amqpexchangedurable",	action="store_true",	default=config.get("amqpexchangedurable", False),	help="AMQP exchange durability.")
 	arg_parser.add_argument("--amqpautodelete",	action="store_true",			default=config.get("amqpautodelete", False),		help="AMQP exchange auto-delete.")
 	arg_parser.add_argument("--amqpmessagedurable",	action="store_true",		default=config.get("amqpmessagedurable", False),	help="AMQP message durability.")
-	arg_parser.add_argument("--debug",			action="store_true",			default=config.get("debug", False),					help="When used with verbose, also debug backend library logging messages.")
 
-	args = arg_parser.parse_args()
+	return arg_parser
 
-	if args.hostdir == None:
+def parse_cli_args(config):
+	""" Parses incoming CLI arguments and performs basic validation. """
+
+	args = get_cli_args_parser(config).parse_args()
+
+	if args.hostdir == None or args.hostdir == "None":
 		get_logger(__name__).error("No hostdir specified, nothing to do...")
 		sys.exit(0)
 
@@ -108,15 +117,23 @@ def reload_config():
 
 	uid = args.uid
 	gid = args.gid
+	pidfile = args.pidfile
 
 	try:
-		if isinstance(uid, basestring):
+		if uid == "None":
+			uid = None
+		elif isinstance(uid, basestring):
 			uid = pwd.getpwnam(uid).pw_uid
-		if isinstance(gid, basestring):
+		if gid == "None":
+			gid = None
+		elif isinstance(gid, basestring):
 			gid = grp.getgrnam(gid).gr_gid
 	except KeyError:
 		get_logger("{0}.{1}".format(__name__, "reload_config")).fatal("Could not find given uid or gid.")
 		sys.exit(1)
+
+	if pidfile == "None":
+		pidfile = None
 
 	DAEMONIZE = args.daemonize
 	UID = uid
