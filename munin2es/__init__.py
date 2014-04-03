@@ -18,7 +18,7 @@
 #
 
 from __future__ import absolute_import
-import logging, logging.handlers, os, sys, datetime, time, setproctitle
+import logging, logging.handlers, os, sys, datetime, time, setproctitle, pwd, grp
 from multiprocessing import Process, Manager
 from Queue import Empty
 from chaos.arguments import get_config_argparse
@@ -63,8 +63,8 @@ def parse_cli_args(config):
 	arg_parser.prog = NAME
 	arg_parser.description = "{0} is an interface between Munin and Elasticsearch, to allow indexing Munin metrics using Elasticsearch.".format(NAME)
 	arg_parser.add_argument("--daemonize",		action="store_true",			default=config.get("daemonize", False),				help="Daemonize the program.")
-	arg_parser.add_argument("--uid",			metavar="UID",		type=int,	default=config.get("uid", None),					help="User to switch to after daemonizing.")
-	arg_parser.add_argument("--gid",			metavar="GID",		type=int,	default=config.get("gid", None),					help="Group to switch to after daemonizing.")
+	arg_parser.add_argument("--uid",			metavar="UID",		type=str,	default=config.get("uid", None),					help="User to switch to after daemonizing.")
+	arg_parser.add_argument("--gid",			metavar="GID",		type=str,	default=config.get("gid", None),					help="Group to switch to after daemonizing.")
 	arg_parser.add_argument("--pidfile",		metavar="PID",		type=str,	default=config.get("pidfile", None),				help="Where to create a PID file after daemonizing.")
 	arg_parser.add_argument("--interval",		metavar="INT",		type=int,	default=config.get("interval", 5*60),				help="Minimum interval between Munin fetches.")
 	arg_parser.add_argument("--timeout",		metavar="TIM",		type=int,	default=config.get("timeout", 5),					help="Connection timeout in seconds.")
@@ -106,9 +106,21 @@ def reload_config():
 	VERBOSE = args.verbose
 	DEBUG = args.debug
 
+	uid = args.uid
+	gid = args.gid
+
+	try:
+		if isinstance(uid, basestring):
+			uid = pwd.getpwnam(uid).pw_uid
+		if isinstance(gid, basestring):
+			gid = grp.getgrnam(gid).gr_gid
+	except KeyError:
+		get_logger("{0}.{1}".format(__name__, "reload_config")).fatal("Could not find given uid or gid.")
+		sys.exit(1)
+
 	DAEMONIZE = args.daemonize
-	UID = args.uid
-	GID = args.gid
+	UID = uid
+	GID = gid
 	PIDFILE = args.pidfile
 
 	HOSTDIR = args.hostdir
