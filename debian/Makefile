@@ -18,6 +18,9 @@ package: clean generate_control generate_man
 generate_control:
 	cat debian/control.source debian/control.precise > debian/control
 
+generate_default_config:
+	python -m munin2es.helpers.create-config > debian/munin2es.config
+
 generate_man:
 	help2man --version-option="--version" --no-discard-stderr -N ./main.py > debian/munin2es.1 && echo "debian/munin2es.1" >> debian/munin2es.manpages
 	help2man --version-option="--version" --no-discard-stderr -N ./river.py > debian/munin2es-river.1 && echo "debian/munin2es-river.1" >> debian/munin2es.manpages
