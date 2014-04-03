@@ -28,6 +28,7 @@ from chaos.multiprocessing.workers import Workers
 from .muninnode import MuninNodeClient
 from .elasticsearch import BulkMessage, generate_index_name, DAILY
 from .amqp import Queue, NORMAL_MESSAGE, PERSISTENT_MESSAGE
+from configobj import ConfigObj
 
 from .version import NAME, VERSION, BUILD
 
@@ -56,6 +57,34 @@ AMQPMESSAGEDURABLE = None
 QUEUELIMITFACTOR = 3
 RELOADCONFIG = False
 STOP = False
+
+def get_cli_args_validator():
+	""" Builds a configspec ConfigObj, that can be used as validator. """
+	rules = [
+		"debug = boolean",
+		"daemonize = boolean",
+		"uid = string",
+		"gid = string",
+		"pidfile = string",
+		"interval = integer",
+		"timeout = integer",
+		"requeuetimeout = integer",
+		"hostdir = string",
+		"workers = integer",
+		"amqphost = string",
+		"amqpport = integer",
+		"amqpuser = string",
+		"amqppass = string",
+		"amqpvhost = string",
+		"amqpexchange = string",
+		"amqproutingkey = string",
+		"amqppassive = boolean",
+		"amqpexchangedurable = boolean",
+		"amqpautodelete = boolean",
+		"amqpmessagedurable = boolean"
+	]
+
+	return ConfigObj(rules, list_values=False)
 
 def get_cli_args_parser(config, suppress=None):
 	""" Builds an ArgumentParser to parse incoming CLI arguments. """
@@ -108,7 +137,7 @@ def reload_config():
 	global HOSTDIR, WORKERS, INTERVAL, TIMEOUT, REQUEUETIMEOUT
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
-	config = get_config(config_base=NAME, custom_file=STARTARG.config)
+	config = get_config(config_base=NAME, custom_file=STARTARG.config, configspec=get_cli_args_validator())
 	args = parse_cli_args(config)
 
 	QUIET = args.quiet
