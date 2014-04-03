@@ -2,7 +2,9 @@
 *.pyc
 
 ## Working directories
+/build
 /dist
+/tmp
 
 ## Config files
 /*.config
@@ -13,7 +15,9 @@
 
 ## Debian build files
 /debian/control
+/debian/munin2es
 /debian/munin2es.*
+/debian/munin2es-river.*
 /debian/files
 /debian/tmp
 /debian/*.log

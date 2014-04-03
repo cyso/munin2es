@@ -5,8 +5,6 @@ clean:
 	rm -vfR build
 	rm -vfR debian/control
 	rm -vfR debian/munin2es*
-	rm -vf doc/munin2es
-	rm -vf doc/munin2es.*
 
 changelog:
 	git dch --ignore-branch --snapshot --auto --git-author
@@ -20,10 +18,10 @@ generate_control:
 	cat debian/control.source debian/control.precise > debian/control
 
 generate_default_config:
-	python -m munin2es.helpers.create-config > doc/munin2es.config
+	python -m munin2es.helpers.create-config > debian/munin2es.config
 
 generate_initd:
-	cp -v doc/munin2es-initd doc/munin2es
+	cp -v doc/munin2es-initd debian/munin2es.init
 
 generate_man:
 	help2man --version-option="--version" --no-discard-stderr -N ./main.py > debian/munin2es.1 && echo "debian/munin2es.1" >> debian/munin2es.manpages

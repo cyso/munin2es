@@ -36,8 +36,7 @@ setup(
 	packages=["munin2es"],
 	scripts=["main.py", "river.py"],
 	data_files=[
-		("/etc", ["doc/munin2es.config"]),
-		("/etc/init.d", ["doc/{0}".format(NAME)]),
+		("/etc", ["debian/munin2es.config"]),
 		("/usr/share/doc/{0}".format(NAME), ["doc/river_example.json"])
 	]
 )

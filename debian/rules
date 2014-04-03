@@ -8,5 +8,8 @@ override_dh_auto_install:
 
 override_dh_auto_build:
 
+override_dh_installdirs:
+	dh_installdirs etc/munin2es-hosts.d/
+
 override_dh_installinit:
-	dh_installinit --onlyscripts
+	dh_installinit --no-start --init-script init --name munin2es
