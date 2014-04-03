@@ -59,11 +59,8 @@ class Queue(object):
 		self.channel = self.connection.channel()
 
 		self.exchange_name = exchange['exchange']
-		try:
-			self.logger.debug("Declaring exchange {0}".format(self.exchange_name))
-			self.channel.exchange_declare(**exchange)
-		except ChannelClosed, cce:
-			raise Exception(str(cce[1]))
+		self.logger.debug("Declaring exchange {0}".format(self.exchange_name))
+		self.channel.exchange_declare(**exchange)
 	
 	def close(self):
 		"""
