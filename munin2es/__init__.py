@@ -99,7 +99,7 @@ def reload_config():
 	global HOSTDIR, WORKERS, INTERVAL, TIMEOUT, REQUEUETIMEOUT
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
-	config = get_config(STARTARG)
+	config = get_config(config_base=NAME, custom_file=STARTARG.config)
 	args = parse_cli_args(config)
 
 	QUIET = args.quiet
