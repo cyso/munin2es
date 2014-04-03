@@ -177,7 +177,7 @@ def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 
 def dispatcher():
 	""" Main worker, responsible for mainting Queues and distributing work. """
-	global RELOADCONFIG
+	global RELOADCONFIG, STOP
 
 	manager = Manager()
 	munin_queue = manager.Queue()
@@ -243,6 +243,10 @@ def dispatcher():
 				break
 
 			if item[0] == "error":
+				if item[2] == "FATAL":
+					logger.fatal("Received fatal error from worker, stop all the things!")
+					STOP = True
+					continue
 				logger.error("Received error for host {0}: {1}".format(item[1], item[2]))
 			elif item[0] == "munin":
 				message_queue.put((item[1], item[2]))
