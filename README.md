@@ -13,6 +13,7 @@ Dependencies
 * python-dateutil
 * [python-elasticsearch]
 * python-pika
+* python-setproctitle
 
 Building
 ========
