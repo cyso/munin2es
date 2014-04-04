@@ -18,7 +18,7 @@
 #
 
 from __future__ import absolute_import
-import logging, logging.handlers, os, sys, datetime, time, setproctitle, pwd, grp
+import logging, logging.handlers, os, sys, datetime, time, setproctitle, pwd, grp, socket
 from multiprocessing import Process, Manager
 from Queue import Empty
 from chaos.arguments import get_config_argparse
@@ -343,6 +343,9 @@ def munin_worker(name, work, response):
 		index = generate_index_name("munin", DAILY)
 		try:
 			bulk = process_munin_client_to_bulk(node=host, port=port, address=address, index=index)
+		except socket.timeout:
+			response.put(("error", host, "Connection timed out"))
+			continue
 		except IOError, ioe:
 			response.put(("error", host, ioe.strerror))
 			continue
