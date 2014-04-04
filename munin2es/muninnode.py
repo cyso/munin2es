@@ -162,14 +162,19 @@ class MuninMessage(object):
 		"""
 		messages = []
 		for key, value in self.values.iteritems():
-			message = {
-				"graph": self.config["graph"],
-				"config": self.config["specific"][key],
-				"hostname": self.hostname,
-				"module": self.module,
-				"key": key,
-				"value": value
-			}
+			try:
+				message = {
+					"graph": self.config["graph"],
+					"config": self.config["specific"][key],
+					"hostname": self.hostname,
+					"module": self.module,
+					"key": key,
+					"value": value
+				}
+			except KeyError:
+				logging.getLogger(__name__).warning("Host {0} reported values for {1}, but did not have any configuration. Skipping value...".format(self.hostname, key))
+				continue
+
 			if self.timestamp:
 				message['timestamp'] = self.timestamp
 			if as_string and individual:
