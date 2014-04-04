@@ -2,6 +2,6 @@ Source: munin2es
 Maintainer: Nick Douma <n.douma@nekoconeko.nl>
 Section: python
 Priority: optional
-Build-Depends: python-all (>= 2.6.6-3), debhelper (>= 7)
+Build-Depends: python-all (>= 2.6.6-3), debhelper (>= 7), python-chaos (>= 0.1), python-configobj, python-daemon, python-dateutil, python-elasticsearch, python-pika, python-setproctitle
 Standards-Version: 3.9.1
 
