@@ -223,7 +223,7 @@ def dispatcher():
 		process = Process(name=name, target=munin_worker, args=(name, munin_queue, done_queue))
 		workers.registerWorker(name, process)
 
-	for i in range(1):
+	for i in range(2):
 		name = "message-{0}".format(str(i))
 		process = Process(name=name, target=message_worker, args=(name, message_queue, done_queue))
 		workers.registerWorker(name, process)
