@@ -353,7 +353,11 @@ def munin_worker(name, work, response):
 		if not bulk:
 			response.put(("error", host, "No response from Munin node."))
 		else:
-			response.put(("munin", host, bulk.generate(as_objects=True)))
+			try:
+				response.put(("munin", host, bulk.generate(as_objects=True)))
+			except TypeError, tee:
+				response.put(("error", host, str(tee)))
+				continue
 	logger.debug("Exiting loop")
 
 def message_worker(name, work, response):
