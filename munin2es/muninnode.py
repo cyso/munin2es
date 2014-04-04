@@ -84,12 +84,19 @@ class MuninNodeClient(object):
 				ret[subkey] = {}  # use nested dictionaries for multigraph
 				data = ret[subkey]
 				continue
-			key, rest = line.split('.', 1)
-			prop, value = rest.split(' ', 1)
+			try:
+				key, rest = line.split('.', 1)
+				prop, value = rest.split(' ', 1)
+			except ValueError, vee:
+				raise ValueError("Node {0} module {1} provided invalid data (split error), ignoring...".format(self.hostname, key))
+
 			if value == 'U':
 				value = None
 			else:
-				value = float(value)
+				try:
+					value = float(value)
+				except ValueError, tee:
+					raise ValueError("Node {0} module {1} provided invalid data (float error), ignoring...".format(self.hostname, key))
 			data[key] = value
 		return ret
 
@@ -98,15 +105,18 @@ class MuninNodeClient(object):
 		self.connection.sendall("config %s\n" % key)
 		ret = {}
 		for line in self._iterline():
-			if line.startswith('graph_'):
-				key, value = line.split(' ', 1)
-				ret[key] = value
-			else:
-				key, rest = line.split('.', 1)
-				prop, value = rest.split(' ', 1)
-				if not ret.get(key):
-					ret[key] = {}
-				ret[key][prop] = value
+			try:
+				if line.startswith('graph_'):
+					key, value = line.split(' ', 1)
+					ret[key] = value
+				else:
+					key, rest = line.split('.', 1)
+					prop, value = rest.split(' ', 1)
+					if not ret.get(key):
+						ret[key] = {}
+					ret[key][prop] = value
+			except ValueError, vee:
+				raise ValueError("Node {0} module {1} provided invalid configuration data (split error), ignoring...".format(self.hostname, key))
 		if mangle:
 			return mangle_config(ret)
 		else:
@@ -118,7 +128,11 @@ class MuninNodeClient(object):
 		messages = []
 
 		for module in modules:
-			message = MuninMessage(hostname=self.hostname, module=module, config=self.config(module, mangle=True), values=self.fetch(module))
+			try:
+				message = MuninMessage(hostname=self.hostname, module=module, config=self.config(module, mangle=True), values=self.fetch(module))
+			except ValueError, tee:
+				self.logger.warning(str(tee))
+				continue
 			if preformat:
 				message = message.format(**kwargs)
 			messages.extend(message)
