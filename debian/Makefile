@@ -39,5 +39,9 @@ source_no_sign: clean generate_all
 upload_to_ppa:
 	dput ppa:lordgaav/munin2es "$(CHANGES)"
 
+pbuild_update:
+	@OTHERMIRROR="deb http://ppa.launchpad.net/lordgaav/python-elasticsearch/ubuntu/ $(DIST) main|deb http://ppa.launchpad.net/lordgaav/python-chaos/ubuntu/ $(DIST) main" \
+	pbuilder-dist "$(DIST)" update --keyring debian/test/pubring.gpg
+
 pbuild:
-	pbuilder-dist "$(DIST)" "$(CHANGES)"
+	pbuilder-dist "$(DIST)" "$(CHANGES)" --keyring debian/test/pubring.gpg

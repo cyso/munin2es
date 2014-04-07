@@ -16,11 +16,11 @@
 # Do NOT "set -e"
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
-PATH=/bin:/usr/bin
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="a bridge between Munin and Elasticsearch"
 NAME=munin2es
 DAEMON=/usr/bin/$NAME
-DAEMON_ARGS="--options args"
+DAEMON_ARGS="--daemonize"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
@@ -56,7 +56,7 @@ do_start()
 	# to handle requests from services started subsequently which depend
 	# on this one.  As a last resort, sleep for some time.
 
-	sleep(10)
+	sleep 10s
 	# Check if PID file was created and still exists
 	[ -r $PIDFILE ] || exit 2
 }

@@ -27,7 +27,7 @@ suppress = [ "help", "config", "version", "quiet" ]
 argparser = get_cli_args_parser(ConfigObj())
 
 override = {
-	"daemonize": True,
+	"daemonize": False,
 	"amqphost": "127.0.0.1",
 	"amqpuser": "guest",
 	"amqppass": "guest",
