@@ -63,7 +63,7 @@ done
 popd
 
 if [ "$UPLOAD" == "y" ]; then
-	NAME=$(cat debian/changelog | head -n1 | egrep -o "^[a-z]+")
+	NAME=$(cat debian/changelog | head -n1 | egrep -o "^[a-z0-9]+")
 	VERSION=$(cat debian/changelog | head -n1 | egrep -o "\([0-9\.]+*\)" | egrep -o "[0-9\.]+")
 
 	for i in $DISTS; do
