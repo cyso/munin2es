@@ -20,7 +20,7 @@ bump_version:
 generate_all: generate_control generate_default_config generate_initd generate_man
 
 generate_control:
-	cat debian/control.source debian/control.precise > debian/control
+	cat debian/control.source debian/control.saucy > debian/control
 
 generate_default_config:
 	python -m munin2es.helpers.create-config > debian/munin2es.config
