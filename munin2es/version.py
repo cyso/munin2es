@@ -19,4 +19,4 @@
 
 NAME = "munin2es"
 VERSION = "0.1"
-BUILD = "AAAAA"
+BUILD = "6ab0fd3"

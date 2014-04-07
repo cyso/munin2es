@@ -1,5 +1,6 @@
 KEY=CD9C0E84
 DIST=saucy
+GIT_REV=$(shell git rev-parse --short --verify HEAD)
 
 clean:
 	rm -vfR build
@@ -11,6 +12,10 @@ changelog:
 
 release:
 	git dch --ignore-branch --release --auto -N $(VERSION) --git-author
+
+bump_version:
+	sed -i 's/VERSION = ".*"/VERSION = "$(VERSION)"/;s/BUILD = ".*"/BUILD = "$(GIT_REV)"/' munin2es/version.py
+	tail -n3 munin2es/version.py
 
 generate_all: generate_control generate_default_config generate_initd generate_man
 
