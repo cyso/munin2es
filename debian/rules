@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python2
+
+override_dh_auto_install:
+	python setup.py install --root=debian/munin2es --install-layout=deb --install-lib=/usr/share/munin2es --install-scripts=/usr/share/munin2es
+
+override_dh_auto_build:
+
+override_dh_installdirs:
+	dh_installdirs etc/munin2es-hosts.d/
+
+override_dh_installinit:
+	dh_installinit --no-start --init-script init --name munin2es

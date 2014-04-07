@@ -1,0 +1,86 @@
+munin2es (0.1) VERSION; urgency=low
+
+  * Initial commit
+
+  * Add .gitignore
+  * Add munin2es module init file
+  * Add MuninNodeClient
+  * Add MuninMessage
+  * Add README placeholder
+  * Add amqp.py with Queue class
+  * Remove redundant code for __init__, we are now using python-chaos
+  * Add BulkMessage
+  * Add get_all_messages
+  * Restructure BulkMessage generate method
+  * Allow specification of custom address for a certain hostname.
+  * Add hostname to MuninMessage output
+  * Make sure to add a timezone to the ISO timestamp
+  * Add module to MuninMessage
+  * Remove unused parts for __init__.py
+  * Add small starting point for main script
+  * Add CLI argument parser and configuration updater
+  * Add logic up until configuration loading
+  * Add generate_index_name
+  * Fix format and spelling errors
+  * Rename process_munin_client to process_munin_client_to_bulk
+  * Extend argument parser with options for AMQP
+  * Implement bulk_to_rabbitmq, and add index parameter to process_munin_client_to_bulk
+  * Add option to output generated Bulk message as objects instead of string
+  * Implement logic up until sending messages to RabbitMQ
+  * Add small CLI tools to manipulate Elasticsearch River settings
+  * Refactor node processing logic to separate function
+  * Output message on run completion
+  * Suppress backend logging messages in --verbose, and allow them in --debug
+  * Add debug logging to appropriate places
+  * Start work on multiprocessing support
+  * Implement munin_worker()
+  * Use Manager Queues instead of plain Process Queues
+  * Implement message_worker
+  * Set the proctitle of worker processes
+  * Call Workers.stopAll, to bring down all Processes in a controlled way
+  * Remove debug spew
+  * Pylint ALL the things, and implement feedback where appropriate.
+  * Add error handling for Munin connections
+  * Make first run start immediately again
+  * Speed up main loop
+  * Speed up workers
+  * Don't stop the worker on error, just continue
+  * Set process title for munin workers to the currently processing host
+  * Make timeout between runs and requeues configurable
+  * Remove extraneous debugging info
+  * Implement daemonizing
+  * Update depedencies in README
+  * Refactor logic in main.py
+  * Move version information to separate file
+  * Add Debian control files and setup.py
+  * Use small ArgumentParser to handle --version for help2man
+  * Set program names properly
+  * Add Makefile target to generate man pages
+  * Allow specifying uid and gid by name again
+  * Fix calling of get_config
+  * Refactor cli_parser logic to allow reuse of ArgumentParser
+  * Add default configuration generator
+  * Restructure Makefile, for easier maintenance
+  * Generate init.d file and include it in package
+  * Cleanup temporary config files
+  * Add examples
+  * Try to keep intermediate package files to the debian subdir as much as possible
+  * Expose AMQP errors to calling class
+  * Add FATAL errors, which tell dispatcher to stop everything if raised.
+  * Sanitize incoming configuration files by using a configspec
+  * Add error handling to message_worker
+  * Add space to error message
+  * Work around hosts that report values that they do not have configuration for
+  * Handle timeout errors individually
+  * Handle the edge case of empty Bulk messages properly
+  * Add missing dependency for python-setproctitle
+  * Validate received Munin data, and ignore invalid messages
+  * For now, start two AMQP workers instead of one.
+  * Add binary dependencies to source package
+  * Move argument parsing stuff to separate file
+  * Fix issues with initd script
+  * Add PPA key to pbuilder tarball, and change instructions accordingly
+  * Remove build file for Ubuntu Precise
+  * Bump version, update changelog
+
+ -- Nick Douma <n.douma@nekoconeko.nl>  Mon, 07 Apr 2014 16:14:40 +0200

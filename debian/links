@@ -1,0 +1,2 @@
+/usr/share/munin2es/main.py /usr/bin/munin2es
+/usr/share/munin2es/river.py /usr/bin/munin2es-river

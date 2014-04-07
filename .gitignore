@@ -1,0 +1,24 @@
+## Compiled Python files
+*.pyc
+
+## Working directories
+/build
+/dist
+/tmp
+
+## Config files
+/*.config
+
+## Ant generated files
+/doc/*.1
+/*.tar.bz2
+
+## Debian build files
+/debian/control
+/debian/munin2es
+/debian/munin2es.*
+/debian/munin2es-river.*
+/debian/files
+/debian/tmp
+/debian/*.log
+/debian/*.README.*
