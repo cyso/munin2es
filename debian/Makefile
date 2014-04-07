@@ -1,6 +1,13 @@
 KEY=CD9C0E84
 DIST=saucy
 GIT_REV=$(shell git rev-parse --short --verify HEAD)
+MAJOR_VERSION=$(shell head -n1 debian/changelog | egrep -o \[0-9\]+\\. | sed 's/\.//')
+MINOR_VERSION=$(shell head -n1 debian/changelog | egrep -o \\.\[0-9\]+ | sed 's/\.//')
+
+ifndef VERSION
+TMP_VERSION=$(shell expr $(MINOR_VERSION) + 1)
+VERSION=$(MAJOR_VERSION).$(TMP_VERSION)
+endif
 
 clean:
 	rm -vfR build
@@ -33,7 +40,11 @@ generate_man:
 	help2man --version-option="--version" --no-discard-stderr -N ./river.py > debian/munin2es-river.1 && echo "debian/munin2es-river.1" >> debian/munin2es.manpages
 
 package: clean generate_all
+	make -f debian/Makefile bump_version VERSION=$(VERSION)~dev
+	sed -i "0,/RELEASE/s/(.*)/($(VERSION)~dev)/" debian/changelog
 	dpkg-buildpackage -A -us -uc
+	git checkout munin2es/version.py
+	git checkout debian/changelog
 
 source: clean generate_all
 	dpkg-buildpackage -S -k$(KEY)
@@ -57,3 +68,6 @@ pbuild_update:
 
 pbuild:
 	pbuilder-dist "$(DIST)" "$(CHANGES)"
+
+version:
+	echo $(VERSION)
