@@ -39,9 +39,16 @@ source_no_sign: clean generate_all
 upload_to_ppa:
 	dput ppa:lordgaav/munin2es "$(CHANGES)"
 
+pbuild_create:
+	pbuilder-dist "$(DIST)" create
+	gunzip ~/pbuilder/$(DIST)-base.tgz
+	tar -Af ~/pbuilder/$(DIST)-base.tar debian/lordgaav-ppa-key.tar
+	gzip ~/pbuilder/$(DIST)-base.tar
+	mv ~/pbuilder/$(DIST)-base.tar.gz ~/pbuilder/$(DIST)-base.tgz
+
 pbuild_update:
 	@OTHERMIRROR="deb http://ppa.launchpad.net/lordgaav/python-elasticsearch/ubuntu/ $(DIST) main|deb http://ppa.launchpad.net/lordgaav/python-chaos/ubuntu/ $(DIST) main" \
-	pbuilder-dist "$(DIST)" update --keyring debian/test/pubring.gpg
+	pbuilder-dist "$(DIST)" update
 
 pbuild:
-	pbuilder-dist "$(DIST)" "$(CHANGES)" --keyring debian/test/pubring.gpg
+	pbuilder-dist "$(DIST)" "$(CHANGES)"

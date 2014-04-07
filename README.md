@@ -24,10 +24,11 @@ No building is required to use munin2es. To build a Debian package, perform the 
 
 From here you can either build the package with pbuilder-dist:
 
-2. `pbuilder-dist saucy create`
-3. `make -f debian/Makefile source_no_sign`
-4. `make -f debian/Makefile pbuild CHANGES=../munin2es_xxxx_.dsc`
-5. look for the resulting .deb in ~/pbuilder/saucy_result
+2. `make -f debian/Makefile pbuild_create`
+3. `make -f debian/Makefile pbuild_update`
+4. `make -f debian/Makefile source_no_sign`
+5. `make -f debian/Makefile pbuild CHANGES=../munin2es_xxxx_.dsc`
+6. look for the resulting .deb in ~/pbuilder/saucy_result
 
 Or directly using dpkg-buildpackage
 
