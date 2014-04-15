@@ -78,9 +78,9 @@ class MuninNodeClient(object):
 		self.logger.debug("Node {0} supports modules: {1}".format(self.hostname, " ".join(modules)))
 		return modules
 
-	def fetch(self, key):
+	def fetch(self, module):
 		""" Fetch the counters for the given Munin Node module. """
-		self.connection.sendall("fetch %s\n" % key)
+		self.connection.sendall("fetch %s\n" % module)
 		ret = {}
 		data = ret # For non-multigraph, we make a single-level dictionary
 		for line in self._iterline():
@@ -93,8 +93,8 @@ class MuninNodeClient(object):
 				key, rest = line.split('.', 1)
 				prop, value = rest.split(' ', 1)
 			except ValueError, vee:
-				raise ValueError("Node {0} module {1} provided invalid data (split error), ignoring...".format(self.hostname, key))
 				self._read_to_end()
+				raise ValueError("Node {0} module {1} provided invalid data (split error), ignoring...".format(self.hostname, module))
 
 			if value == 'U':
 				value = None
@@ -102,14 +102,14 @@ class MuninNodeClient(object):
 				try:
 					value = float(value)
 				except ValueError, tee:
-					raise ValueError("Node {0} module {1} provided invalid data (float error), ignoring...".format(self.hostname, key))
 					self._read_to_end()
+					raise ValueError("Node {0} module {1} provided invalid data (float error), ignoring...".format(self.hostname, module))
 			data[key] = value
 		return ret
 
-	def config(self, key, mangle=False):
+	def config(self, module, mangle=False):
 		""" Fetch the configuration for the given Munin Node module. """
-		self.connection.sendall("config %s\n" % key)
+		self.connection.sendall("config %s\n" % module)
 		ret = {}
 		for line in self._iterline():
 			try:
@@ -123,8 +123,8 @@ class MuninNodeClient(object):
 						ret[key] = {}
 					ret[key][prop] = value
 			except ValueError, vee:
-				raise ValueError("Node {0} module {1} provided invalid configuration data (split error), ignoring...".format(self.hostname, key))
 				self._read_to_end()
+				raise ValueError("Node {0} module {1} provided invalid configuration data (split error), ignoring...".format(self.hostname, module))
 		if mangle:
 			return mangle_config(ret)
 		else:
