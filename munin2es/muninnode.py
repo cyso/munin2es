@@ -66,6 +66,11 @@ class MuninNodeClient(object):
 				break
 			yield line
 
+	def _read_to_end(self):
+		""" Read from internal connection until message is finished. """
+		for line in self._iterline():
+			pass
+
 	def list(self):
 		""" List all available Munin Node modules. """
 		self.connection.sendall("list\n")
@@ -89,6 +94,7 @@ class MuninNodeClient(object):
 				prop, value = rest.split(' ', 1)
 			except ValueError, vee:
 				raise ValueError("Node {0} module {1} provided invalid data (split error), ignoring...".format(self.hostname, key))
+				self._read_to_end()
 
 			if value == 'U':
 				value = None
@@ -97,6 +103,7 @@ class MuninNodeClient(object):
 					value = float(value)
 				except ValueError, tee:
 					raise ValueError("Node {0} module {1} provided invalid data (float error), ignoring...".format(self.hostname, key))
+					self._read_to_end()
 			data[key] = value
 		return ret
 
@@ -117,6 +124,7 @@ class MuninNodeClient(object):
 					ret[key][prop] = value
 			except ValueError, vee:
 				raise ValueError("Node {0} module {1} provided invalid configuration data (split error), ignoring...".format(self.hostname, key))
+				self._read_to_end()
 		if mangle:
 			return mangle_config(ret)
 		else:
