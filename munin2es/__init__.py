@@ -175,7 +175,11 @@ def dispatcher():
 
 		now = datetime.datetime.now()
 
-		if munin_queue.qsize() < (len(hosts) * QUEUELIMITFACTOR):
+		work_queue_size = munin_queue.qsize()
+		message_queue_size = message_queue.qsize()
+		queue_limit = len(hosts) * QUEUELIMITFACTOR
+
+		if work_queue_size < queue_limit and message_queue_size < queue_limit:
 			for (host, config) in hosts.iteritems():
 				if not host in timestamps.keys():
 					timestamps[host] = (datetime.datetime.min, True)
@@ -192,7 +196,10 @@ def dispatcher():
 					timestamps[host] = (now, False)
 					logger.warning("No response received for host {0}, requeued".format(host))
 		else:
-			logger.warning("Munin worker queue is full, will not queue more work.")
+			if work_queue_size >= queue_limit:
+				logger.warning("Munin worker queue is full, will not queue more work.")
+			if message_queue_size >= queue_limit:
+				logger.warning("AMQP message queue is full, will not queue more work.")
 
 		while True:
 			try:
