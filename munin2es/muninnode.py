@@ -41,7 +41,8 @@ class MuninNodeClient(object):
 	def __init__(self, hostname, port=4949, address=None, timeout=5):
 		""" Connect to the given host and port. """
 		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=timeout)
-		self.connection.settimeout(None)
+		## Python specs say that makefile() cannot be used when a timeout is set. I find no noticable difference,
+		## so a timeout is still set at this point.
 		self.file = self.connection.makefile()
 		self.hello = self._readline()
 		self.hostname = hostname
