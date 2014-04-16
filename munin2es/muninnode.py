@@ -38,11 +38,12 @@ def mangle_config(config):
 class MuninNodeClient(object):
 	""" Connects to Munin Node, and provides easy access to its data. """
 
-	def __init__(self, hostname, port=4949, address=None, timeout=5):
+	def __init__(self, hostname, port=4949, address=None, connect_timeout=5, fetch_timeout=60):
 		""" Connect to the given host and port. """
-		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=timeout)
+		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=connect_timeout)
 		## Python specs say that makefile() cannot be used when a timeout is set. I find no noticable difference,
 		## so a timeout is still set at this point.
+		self.connection.settimeout(fetch_timeout)
 		self.file = self.connection.makefile()
 		self.hello = self._readline()
 		self.hostname = hostname

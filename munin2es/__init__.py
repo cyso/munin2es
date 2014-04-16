@@ -46,7 +46,8 @@ PIDFILE = None
 HOSTDIR = None
 WORKERS = None
 INTERVAL = None
-TIMEOUT = None
+CONNECTTIMEOUT = None
+FETCHTIMEOUT = None
 REQUEUETIMEOUT = None
 
 AMQPHOST = None
@@ -63,7 +64,7 @@ def reload_config():
 	""" (Re-)read config and cli arguments, and set them internally. """
 	global QUIET, VERBOSE, DEBUG
 	global DAEMONIZE, UID, GID, PIDFILE
-	global HOSTDIR, WORKERS, INTERVAL, TIMEOUT, REQUEUETIMEOUT
+	global HOSTDIR, WORKERS, INTERVAL, CONNECTTIMEOUT, FETCHTIMEOUT, REQUEUETIMEOUT
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
 	config = get_config(config_base=NAME, custom_file=STARTARG.config, configspec=get_cli_args_validator())
@@ -101,7 +102,8 @@ def reload_config():
 	HOSTDIR = args.hostdir
 	WORKERS = args.workers
 	INTERVAL = args.interval
-	TIMEOUT = args.timeout
+	CONNECTTIMEOUT = args.timeout
+	FETCHTIMEOUT = args.fetchtimeout
 	REQUEUETIMEOUT = args.requeuetimeout
 
 	AMQPHOST = (args.amqphost, args.amqpport)
@@ -121,7 +123,7 @@ def reload_config():
 
 def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 	""" Convenience methode to call MuninNodeClient and process its output into a BulkMessage. """
-	client = MuninNodeClient(node, port, address, TIMEOUT)
+	client = MuninNodeClient(node, port, address, CONNECTTIMEOUT, FETCHTIMEOUT)
 	messages = client.get_all_messages(preformat=True)
 
 	if not messages:
