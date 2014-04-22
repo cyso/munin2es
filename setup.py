@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# Copyright (c) 2014 Nick Douma < n.douma [at] nekoconeko . nl >
+# Copyright (c) 2014 Cyso < development [at] cyso . com >
 #
-# This file is part of chaos, a.k.a. python-chaos .
+# This file is part of munin2es.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
