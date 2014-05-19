@@ -34,9 +34,9 @@ setup(
 	author_email="n.douma@nekoconeko.nl",
 	url="https://github.com/Cysource/munin2es",
 	packages=["munin2es"],
-	scripts=["main.py", "river.py"],
+	scripts=["main.py", "river.py", "doc/convert-munin-config-to-munin2es.sh"],
 	data_files=[
 		("/etc", ["debian/munin2es.config"]),
-		("/usr/share/doc/{0}".format(NAME), ["doc/river_example.json"])
+		("/usr/share/doc/{0}".format(NAME), ["doc/river_example.json"]),
 	]
 )
