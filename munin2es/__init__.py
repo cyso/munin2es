@@ -377,6 +377,9 @@ def message_worker(name, work, response):
 				except ChannelClosed:
 					## Already closed, do nothing
 					pass
+				except Exception, dee:
+					## Unexpected exception, log it and continue
+					logger.error("Unexpected exception while closing queue. " + str(dee))
 				break
 
 			response.put(("message", host))
