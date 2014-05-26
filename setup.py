@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# Copyright (c) 2014 Nick Douma < n.douma [at] nekoconeko . nl >
+# Copyright (c) 2014 Cyso < development [at] cyso . com >
 #
-# This file is part of chaos, a.k.a. python-chaos .
+# This file is part of munin2es.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -34,9 +34,9 @@ setup(
 	author_email="n.douma@nekoconeko.nl",
 	url="https://github.com/Cysource/munin2es",
 	packages=["munin2es"],
-	scripts=["main.py", "river.py"],
+	scripts=["main.py", "river.py", "doc/convert-munin-config-to-munin2es.sh"],
 	data_files=[
 		("/etc", ["debian/munin2es.config"]),
-		("/usr/share/doc/{0}".format(NAME), ["doc/river_example.json"])
+		("/usr/share/doc/{0}".format(NAME), ["doc/river_example.json"]),
 	]
 )

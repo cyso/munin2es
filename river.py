@@ -51,6 +51,7 @@ arg_parser.add_argument("--action",		metavar="A", required=True,  type=str, defa
 arg_parser.add_argument("--host",		metavar="H", required=False, type=str, default="localhost", 
 		help="What Elasticsearch host to connect to. Defaults to localhost.")
 arg_parser.add_argument("--port",		metavar="P", required=False, type=int, default=9200, help="What Elasticsearch port to connect to. Defaults to 9200.")
+arg_parser.add_argument("--ignore_error",	action="store_true", default=False,				 help="Do not return error exit code on error.")
 
 args = arg_parser.parse_args()
 
@@ -105,7 +106,11 @@ if args.action == "create":
 		create_river_config(river=args.river, name=args.name, config=settings, host=args.host, port=args.port)
 	except Exception, e:
 		logging.error("ERROR: failed to create river config: " + str(e))
-		sys.exit(1)
+		if args.ignore_error:
+			logger.info("INFO: errors are being ignored")
+			sys.exit(0)
+		else:
+			sys.exit(1)
 
 elif args.action == "delete":
 	logger.info("Performing Elasticsearch River delete command")
@@ -113,6 +118,10 @@ elif args.action == "delete":
 		delete_river_config(river=args.river, name=args.name, host=args.host, port=args.port)
 	except Exception, e:
 		logging.error("ERROR: failed to delete river config: " + str(e))
-		sys.exit(1)
+		if args.ignore_error:
+			logger.info("INFO: errors are being ignored")
+			sys.exit(0)
+		else:
+			sys.exit(1)
 
 logger.info("Done.")

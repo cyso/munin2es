@@ -46,7 +46,8 @@ PIDFILE = None
 HOSTDIR = None
 WORKERS = None
 INTERVAL = None
-TIMEOUT = None
+CONNECTTIMEOUT = None
+FETCHTIMEOUT = None
 REQUEUETIMEOUT = None
 
 AMQPHOST = None
@@ -63,7 +64,7 @@ def reload_config():
 	""" (Re-)read config and cli arguments, and set them internally. """
 	global QUIET, VERBOSE, DEBUG
 	global DAEMONIZE, UID, GID, PIDFILE
-	global HOSTDIR, WORKERS, INTERVAL, TIMEOUT, REQUEUETIMEOUT
+	global HOSTDIR, WORKERS, INTERVAL, CONNECTTIMEOUT, FETCHTIMEOUT, REQUEUETIMEOUT
 	global AMQPHOST, AMQPCREDENTIALS, AMQPEXCHANGE, AMQPROUTINGKEY, AMQPMESSAGEDURABLE
 
 	config = get_config(config_base=NAME, custom_file=STARTARG.config, configspec=get_cli_args_validator())
@@ -101,7 +102,8 @@ def reload_config():
 	HOSTDIR = args.hostdir
 	WORKERS = args.workers
 	INTERVAL = args.interval
-	TIMEOUT = args.timeout
+	CONNECTTIMEOUT = args.timeout
+	FETCHTIMEOUT = args.fetchtimeout
 	REQUEUETIMEOUT = args.requeuetimeout
 
 	AMQPHOST = (args.amqphost, args.amqpport)
@@ -121,7 +123,7 @@ def reload_config():
 
 def process_munin_client_to_bulk(node, port=4949, address=None, index=None):
 	""" Convenience methode to call MuninNodeClient and process its output into a BulkMessage. """
-	client = MuninNodeClient(node, port, address, TIMEOUT)
+	client = MuninNodeClient(node, port, address, CONNECTTIMEOUT, FETCHTIMEOUT)
 	messages = client.get_all_messages(preformat=True)
 
 	if not messages:
@@ -175,7 +177,11 @@ def dispatcher():
 
 		now = datetime.datetime.now()
 
-		if munin_queue.qsize() < (len(hosts) * QUEUELIMITFACTOR):
+		work_queue_size = munin_queue.qsize()
+		message_queue_size = message_queue.qsize()
+		queue_limit = len(hosts) * QUEUELIMITFACTOR
+
+		if work_queue_size < queue_limit and message_queue_size < queue_limit:
 			for (host, config) in hosts.iteritems():
 				if not host in timestamps.keys():
 					timestamps[host] = (datetime.datetime.min, True)
@@ -192,7 +198,10 @@ def dispatcher():
 					timestamps[host] = (now, False)
 					logger.warning("No response received for host {0}, requeued".format(host))
 		else:
-			logger.warning("Munin worker queue is full, will not queue more work.")
+			if work_queue_size >= queue_limit:
+				logger.warning("Munin worker queue is full, will not queue more work.")
+			if message_queue_size >= queue_limit:
+				logger.warning("AMQP message queue is full, will not queue more work.")
 
 		while True:
 			try:
@@ -368,6 +377,9 @@ def message_worker(name, work, response):
 				except ChannelClosed:
 					## Already closed, do nothing
 					pass
+				except Exception, dee:
+					## Unexpected exception, log it and continue
+					logger.error("Unexpected exception while closing queue. " + str(dee))
 				break
 
 			response.put(("message", host))

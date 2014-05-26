@@ -69,6 +69,7 @@ def get_cli_args_parser(config, suppress=None):
 	arg_parser.add_argument("--pidfile",		metavar="PID",		type=str,	default=config.get("pidfile", None),				help="Where to create a PID file after daemonizing.")
 	arg_parser.add_argument("--interval",		metavar="INT",		type=int,	default=config.get("interval", 5*60),				help="Minimum interval between Munin fetches.")
 	arg_parser.add_argument("--timeout",		metavar="TIM",		type=int,	default=config.get("timeout", 5),					help="Connection timeout in seconds.")
+	arg_parser.add_argument("--fetchtimeout",	metavar="FTIM",		type=int,	default=config.get("fetchtimeout", 60),				help="Data fetch timeout in seconds.")
 	arg_parser.add_argument("--requeuetimeout",		metavar="RTIM",	type=int,	default=config.get("requeuetimeout", 6*60),			help="Requeue timeout in seconds.")
 	arg_parser.add_argument("--hostdir",		metavar="HDIR",		type=str,	default=config.get("hostdir", None),				help="Directory that contains host configuration files.")
 	arg_parser.add_argument("--workers",		metavar="W",		type=int,	default=config.get("workers", 10),					help="How many worker processes to spawn.")

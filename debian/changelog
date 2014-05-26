@@ -1,4 +1,21 @@
-munin2es (0.1) VERSION; urgency=low
+munin2es (0.2) RELEASE; urgency=medium
+
+  * Automatically create a proper dev version number when building a package
+  * Depend on new python-elasticsearch package
+  * Add --ignore_error
+  * Read message until the end on ValueErrors
+  * Don't overwrite module name, so we log the proper module name
+  * Keep timeout in place in MuninNodeClient
+  * Also check message queue status do determine if we can handle new work
+  * Add separate timeout setting for Munin fetch actions
+  * Fix copyright notices
+  * Catch and log unexpected exceptions so we can find then later
+  * Add convert-munin-config-to-munin2es.sh
+  * Bump version, update changelog
+
+ -- Nick Douma <n.douma@nekoconeko.nl>  Mon, 26 May 2014 10:28:48 +0200
+
+munin2es (0.1) RELEASE; urgency=low
 
   * Initial commit
 

@@ -3,7 +3,7 @@ Upstream-Name: munin2es
 Upstream-Contact: Nick Douma, <n.douma@nekoconeko.nl>
 
 Files: *
-Copyright: 2014, Nick Douma, <n.douma@nekoconeko.nl>
+Copyright: 2014, Cyso, <development@cyso.com>
 License: GPL-3
  munin2es is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

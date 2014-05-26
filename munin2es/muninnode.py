@@ -38,10 +38,12 @@ def mangle_config(config):
 class MuninNodeClient(object):
 	""" Connects to Munin Node, and provides easy access to its data. """
 
-	def __init__(self, hostname, port=4949, address=None, timeout=5):
+	def __init__(self, hostname, port=4949, address=None, connect_timeout=5, fetch_timeout=60):
 		""" Connect to the given host and port. """
-		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=timeout)
-		self.connection.settimeout(None)
+		self.connection = socket.create_connection(address=(hostname if not address else address, port), timeout=connect_timeout)
+		## Python specs say that makefile() cannot be used when a timeout is set. I find no noticable difference,
+		## so a timeout is still set at this point.
+		self.connection.settimeout(fetch_timeout)
 		self.file = self.connection.makefile()
 		self.hello = self._readline()
 		self.hostname = hostname
@@ -66,6 +68,11 @@ class MuninNodeClient(object):
 				break
 			yield line
 
+	def _read_to_end(self):
+		""" Read from internal connection until message is finished. """
+		for line in self._iterline():
+			pass
+
 	def list(self):
 		""" List all available Munin Node modules. """
 		self.connection.sendall("list\n")
@@ -73,9 +80,9 @@ class MuninNodeClient(object):
 		self.logger.debug("Node {0} supports modules: {1}".format(self.hostname, " ".join(modules)))
 		return modules
 
-	def fetch(self, key):
+	def fetch(self, module):
 		""" Fetch the counters for the given Munin Node module. """
-		self.connection.sendall("fetch %s\n" % key)
+		self.connection.sendall("fetch %s\n" % module)
 		ret = {}
 		data = ret # For non-multigraph, we make a single-level dictionary
 		for line in self._iterline():
@@ -88,7 +95,8 @@ class MuninNodeClient(object):
 				key, rest = line.split('.', 1)
 				prop, value = rest.split(' ', 1)
 			except ValueError, vee:
-				raise ValueError("Node {0} module {1} provided invalid data (split error), ignoring...".format(self.hostname, key))
+				self._read_to_end()
+				raise ValueError("Node {0} module {1} provided invalid data (split error), ignoring...".format(self.hostname, module))
 
 			if value == 'U':
 				value = None
@@ -96,13 +104,14 @@ class MuninNodeClient(object):
 				try:
 					value = float(value)
 				except ValueError, tee:
-					raise ValueError("Node {0} module {1} provided invalid data (float error), ignoring...".format(self.hostname, key))
+					self._read_to_end()
+					raise ValueError("Node {0} module {1} provided invalid data (float error), ignoring...".format(self.hostname, module))
 			data[key] = value
 		return ret
 
-	def config(self, key, mangle=False):
+	def config(self, module, mangle=False):
 		""" Fetch the configuration for the given Munin Node module. """
-		self.connection.sendall("config %s\n" % key)
+		self.connection.sendall("config %s\n" % module)
 		ret = {}
 		for line in self._iterline():
 			try:
@@ -116,7 +125,8 @@ class MuninNodeClient(object):
 						ret[key] = {}
 					ret[key][prop] = value
 			except ValueError, vee:
-				raise ValueError("Node {0} module {1} provided invalid configuration data (split error), ignoring...".format(self.hostname, key))
+				self._read_to_end()
+				raise ValueError("Node {0} module {1} provided invalid configuration data (split error), ignoring...".format(self.hostname, module))
 		if mangle:
 			return mangle_config(ret)
 		else:
