@@ -18,5 +18,5 @@
 #
 
 NAME = "munin2es"
-VERSION = "0.1"
-BUILD = "6ab0fd3"
+VERSION = "0.2"
+BUILD = "f24bd88"
